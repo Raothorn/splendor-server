@@ -10,6 +10,7 @@ import Data.Aeson
 import Data.Text (Text)
 import GHC.Generics
 import Network.WebSockets (WebSocketsData (fromLazyByteString))
+import Types 
 
 ----------------------------------
 -- Types
@@ -20,13 +21,14 @@ data Request
     = JoinLobbyRequest String
     | ConnectRequest String
     | StartGameRequest
+    | ReadyToPlayRequest
     | NoRequest
     deriving (Generic, Show)
 
 -- A "response" is the message the server send to the client
 data Response
     = LobbyUpdate [String]
-    | GameUpdate Int
+    | GameUpdate SplendorGame
     | JoinLobbySuccess String
     | NoResponse
     deriving (Generic, Show)

@@ -3,14 +3,16 @@
 {-# LANGUAGE TemplateHaskell #-}
 
 module Server (
-    runServer
+    runServer,
 ) where
 
 import Control.Concurrent
 import Control.Monad
 
-import Data.Text (Text)
-import qualified Data.Text as T
+import Control.Exception
+import Control.Monad.Trans.State (execStateT)
+import Data.Aeson
+import Data.Maybe (catMaybes, fromMaybe, isJust)
 import qualified Data.Text.IO as T
 
 import Lens.Micro
@@ -18,12 +20,10 @@ import Lens.Micro.TH (makeLenses)
 
 import qualified Network.WebSockets as WS
 
-import Control.Exception
-import Data.Aeson
-import GHC.RTS.Flags (TraceFlags (user))
-import Network.WebSockets (PermessageDeflate (clientNoContextTakeover))
+import Action
 import Protocol
-import Data.Maybe (catMaybes, fromMaybe)
+import Types
+import Control.Monad.Trans.State.Lazy
 
 ----------------------------------
 -- Types
@@ -38,15 +38,17 @@ data Client = Client
 
 data ServerState = ServerState
     { _lobbyClients :: [Client]
-    , _appState :: Maybe AppState
+    , _appState :: Maybe SplendorGame
     }
-
-type AppState = Int
-
-type Guid = String
 
 makeLenses ''Client
 makeLenses ''ServerState
+
+----------------------------------
+-- Client
+----------------------------------
+isJoined :: Client -> Bool
+isJoined = isJust . _clientUsername
 
 ----------------------------------
 -- ServerState
@@ -91,21 +93,24 @@ handleLobbyMessage (JoinLobbyRequest username) client server = do
     -- Broadcast the new lobby state to the other clients
     broadcastMessage (lobbyUpdate server') server'
     return server'
-
 handleLobbyMessage StartGameRequest _ server = do
-    let initState = 0
+    let joinedClients = filter isJoined (server ^. lobbyClients)
+        initState = newGame (joinedClients ^.. traversed . clientGuid)
         server' = server & appState ?~ initState
 
     broadcastMessage (GameUpdate initState) server'
     return server'
 
-handleLobbyMessage  _ _ server = do
+-- This must be sent by each client after they recieve the first game update
+handleLobbyMessage ReadyToPlayRequest _ server = return server
+    
+handleLobbyMessage _ _ server = do
     putStrLn "Cannot parse request"
     return server
 
 -- Any function that waits for input has to contain the server in an MVar
 talkLobby :: MVar ServerState -> Client -> IO ()
-talkLobby server client  = do
+talkLobby server client = do
     -- Send the state of the lobby to the client
     readMVar server >>= \s -> sendMessage (lobbyUpdate s) client
 
@@ -120,16 +125,31 @@ talkLobby server client  = do
 
     talk server client
 
-talkGame ::  MVar ServerState -> Client -> AppState -> IO ()
+talkGame :: MVar ServerState -> Client -> SplendorGame -> IO ()
 talkGame server client gs = do
     -- Send the state of the game to the client
     sendMessage (GameUpdate gs) client
 
-    msg <- WS.receiveData (client ^. clientConn) 
-    let decodedMessage = decode msg :: Maybe Request
+    msg <- WS.receiveData (client ^. clientConn)
+    let decodedMessage = decode msg :: Maybe Action
+
+    case decodedMessage of
+        Just action -> do
+            putStrLn $ "Received action " <> show action
+            let actionResult = execStateT (execAction (client ^. clientGuid) action) gs
+            
+            case actionResult of
+                Left err -> putStrLn $ "Error: " <> err
+                Right gs' -> do
+                    modifyMVar_ server $ \s -> do
+                        let s' = s & appState ?~ gs'
+                        broadcastMessage (GameUpdate gs') s'
+                        return s'
+
+        Nothing -> do
+            putStrLn $ "Cannot parse action " <> show msg
 
     talk server client
-    
 
 talk :: MVar ServerState -> Client -> IO ()
 talk server client = do
@@ -142,7 +162,6 @@ talk server client = do
 
 attachClient :: Client -> MVar ServerState -> IO ()
 attachClient client server = flip finally disconnect $ do
-
     modifyMVar_ server $ \s -> do
         let s' = addClient client s
         return s'
@@ -173,10 +192,10 @@ application server pending = do
                         else do
                             let client = Client guid conn Nothing
                             attachClient client server
-            _ -> T.putStrLn $
+            _ ->
+                T.putStrLn $
                     "Cannot decode connection request: "
-                    <> WS.fromLazyByteString msg
-
+                        <> WS.fromLazyByteString msg
 
 runServer :: IO ()
 runServer = do

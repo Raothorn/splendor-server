@@ -25,9 +25,11 @@ source-repository head
 
 library
   exposed-modules:
+      Action
       Lib
       Protocol
       Server
+      Types
   other-modules:
       Paths_splendor_server
   autogen-modules:
@@ -39,10 +41,13 @@ library
       aeson
     , base >=4.7 && <5
     , bytestring
+    , containers
     , microlens
+    , microlens-mtl
     , microlens-platform
     , microlens-th
     , text
+    , transformers
     , websockets
   default-language: Haskell2010
 
@@ -59,11 +64,14 @@ executable splendor-server-exe
       aeson
     , base >=4.7 && <5
     , bytestring
+    , containers
     , microlens
+    , microlens-mtl
     , microlens-platform
     , microlens-th
     , splendor-server
     , text
+    , transformers
     , websockets
   default-language: Haskell2010
 
@@ -81,10 +89,13 @@ test-suite splendor-server-test
       aeson
     , base >=4.7 && <5
     , bytestring
+    , containers
     , microlens
+    , microlens-mtl
     , microlens-platform
     , microlens-th
     , splendor-server
     , text
+    , transformers
     , websockets
   default-language: Haskell2010
