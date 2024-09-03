@@ -7,12 +7,12 @@ module Server (
 ) where
 
 import Control.Concurrent
-import Control.Monad
-
 import Control.Exception
-import Control.Monad.Trans.State (execStateT)
+import Control.Monad
+import Control.Monad.Trans.State.Lazy
+
 import Data.Aeson
-import Data.Maybe (catMaybes, fromMaybe, isJust)
+import Data.Maybe
 import qualified Data.Text.IO as T
 
 import Lens.Micro
@@ -23,7 +23,6 @@ import qualified Network.WebSockets as WS
 import Action
 import Protocol
 import Types
-import Control.Monad.Trans.State.Lazy
 
 ----------------------------------
 -- Types
@@ -103,7 +102,6 @@ handleLobbyMessage StartGameRequest _ server = do
 
 -- This must be sent by each client after they recieve the first game update
 handleLobbyMessage ReadyToPlayRequest _ server = return server
-    
 handleLobbyMessage _ _ server = do
     putStrLn "Cannot parse request"
     return server
@@ -137,7 +135,7 @@ talkGame server client gs = do
         Just action -> do
             putStrLn $ "Received action " <> show action
             let actionResult = execStateT (execAction (client ^. clientGuid) action) gs
-            
+
             case actionResult of
                 Left err -> putStrLn $ "Error: " <> err
                 Right gs' -> do
@@ -145,7 +143,6 @@ talkGame server client gs = do
                         let s' = s & appState ?~ gs'
                         broadcastMessage (GameUpdate gs') s'
                         return s'
-
         Nothing -> do
             putStrLn $ "Cannot parse action " <> show msg
 

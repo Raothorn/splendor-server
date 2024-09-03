@@ -26,10 +26,13 @@ source-repository head
 library
   exposed-modules:
       Action
+      GameState
       Lib
+      Player
       Protocol
       Server
       Types
+      Util
   other-modules:
       Paths_splendor_server
   autogen-modules:
