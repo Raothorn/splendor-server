@@ -26,6 +26,7 @@ source-repository head
 library
   exposed-modules:
       Action
+      DevelopmentLookup
       GameState
       Lib
       Player

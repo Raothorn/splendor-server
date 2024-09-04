@@ -137,7 +137,9 @@ talkGame server client gs = do
             let actionResult = execStateT (execAction (client ^. clientGuid) action) gs
 
             case actionResult of
-                Left err -> putStrLn $ "Error: " <> err
+                Left err -> do 
+                    putStrLn $ "Error: " <> err
+                    sendMessage (ErrorNotification err) client
                 Right gs' -> do
                     modifyMVar_ server $ \s -> do
                         let s' = s & appState ?~ gs'

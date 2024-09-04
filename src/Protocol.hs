@@ -30,6 +30,7 @@ data Response
     = LobbyUpdate [String]
     | GameUpdate SplendorGame
     | JoinLobbySuccess String
+    | ErrorNotification String
     | NoResponse
     deriving (Generic, Show)
 
