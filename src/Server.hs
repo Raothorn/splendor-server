@@ -13,6 +13,7 @@ import Control.Monad.Trans.State.Lazy
 
 import Data.Aeson
 import Data.Maybe
+import qualified Data.ByteString.Lazy as BS
 import qualified Data.Text.IO as T
 
 import Lens.Micro
@@ -23,7 +24,7 @@ import qualified Network.WebSockets as WS
 import Action
 import Protocol
 import Types
-
+import InitState
 ----------------------------------
 -- Types
 ----------------------------------
@@ -76,25 +77,30 @@ broadcastMessage msg server = forM_ (server ^. lobbyClients) $ sendMessage msg
 lobbyUpdate :: ServerState -> Response
 lobbyUpdate server =
     let lobbyPlayers = server ^. lobbyClients ^.. traversed . clientUsername
-     in LobbyUpdate (catMaybes lobbyPlayers)
-
-gameUpdate :: ServerState -> Maybe Response
-gameUpdate server = fmap GameUpdate (server ^. appState)
+    in  LobbyUpdate (catMaybes lobbyPlayers)
 
 handleLobbyMessage :: Request -> Client -> ServerState -> IO ServerState
 handleLobbyMessage (JoinLobbyRequest username) client server = do
-    let client' = client & clientUsername ?~ username
-        server' = updateClient client' server
+    let usernames = catMaybes $ server ^. lobbyClients ^.. traversed . clientUsername
 
-    -- Send a success acknowledgement back to the client
-    sendMessage (JoinLobbySuccess username) client'
+    if username `elem` usernames
+        then return server
+        else do
+            let
+                client' = client & clientUsername ?~ username
+                server' = updateClient client' server
 
-    -- Broadcast the new lobby state to the other clients
-    broadcastMessage (lobbyUpdate server') server'
-    return server'
+            -- Send a success acknowledgement back to the client
+            sendMessage (JoinLobbySuccess username) client'
+
+            -- Broadcast the new lobby state to the other clients
+            broadcastMessage (lobbyUpdate server') server'
+            return server'
 handleLobbyMessage StartGameRequest _ server = do
-    let joinedClients = filter isJoined (server ^. lobbyClients)
-        initState = newGame (joinedClients ^.. traversed . clientGuid)
+    let
+        joinedClients = filter isJoined (server ^. lobbyClients)
+        guidUsernames = map (\c -> (c ^. clientGuid, fromJust $ c ^. clientUsername)) joinedClients
+        initState = newGame guidUsernames
         server' = server & appState ?~ initState
 
     broadcastMessage (GameUpdate initState) server'
@@ -107,28 +113,17 @@ handleLobbyMessage _ _ server = do
     return server
 
 -- Any function that waits for input has to contain the server in an MVar
-talkLobby :: MVar ServerState -> Client -> IO ()
-talkLobby server client = do
-    -- Send the state of the lobby to the client
-    readMVar server >>= \s -> sendMessage (lobbyUpdate s) client
-
-    -- Wait for a message from the client
-    msg <- WS.receiveData (client ^. clientConn)
+talkLobby :: BS.ByteString -> Client -> ServerState -> IO ServerState
+talkLobby msg client server = do
     let decodedMessage = decode msg :: Maybe Request
 
     case decodedMessage of
-        Just request ->
-            modifyMVar_ server $ \s -> handleLobbyMessage request client s
-        Nothing -> return ()
+        Just request -> handleLobbyMessage request client server
+        Nothing -> return server
 
-    talk server client
 
-talkGame :: MVar ServerState -> Client -> SplendorGame -> IO ()
-talkGame server client gs = do
-    -- Send the state of the game to the client
-    sendMessage (GameUpdate gs) client
-
-    msg <- WS.receiveData (client ^. clientConn)
+talkGame :: BS.ByteString -> Client -> SplendorGame -> ServerState -> IO ServerState
+talkGame msg client gs server = do
     let decodedMessage = decode msg :: Maybe Action
 
     case decodedMessage of
@@ -137,27 +132,41 @@ talkGame server client gs = do
             let actionResult = execStateT (execAction (client ^. clientGuid) action) gs
 
             case actionResult of
-                Left err -> do 
+                Left err -> do
                     putStrLn $ "Error: " <> err
                     sendMessage (ErrorNotification err) client
+                    return server
                 Right gs' -> do
-                    modifyMVar_ server $ \s -> do
-                        let s' = s & appState ?~ gs'
-                        broadcastMessage (GameUpdate gs') s'
-                        return s'
+                    putStrLn "----OLD-----"
+                    print gs
+                    putStrLn "----NEW-----"
+                    print gs'
+                    broadcastMessage (GameUpdate gs') server
+                    return (server & appState ?~ gs')
         Nothing -> do
             putStrLn $ "Cannot parse action " <> show msg
+            return server
 
-    talk server client
 
 talk :: MVar ServerState -> Client -> IO ()
-talk server client = do
-    -- Read the server state
-    readMVar server >>= \s -> do
-        -- Dispatch to a dedicated handler depending on whether the game has started
-        case s ^. appState of
-            Just gs -> talkGame server client gs
-            Nothing -> talkLobby server client
+talk server client = 
+    forever $ do
+        -- Read the server state
+        readMVar server >>= \s -> do
+            -- Send an appropriate update depending on the app state
+            case s ^. appState of
+                Just gs -> sendMessage (GameUpdate gs) client
+                Nothing -> sendMessage (lobbyUpdate s) client
+
+        -- Wait for a message
+        msg <- WS.receiveData (client ^. clientConn)
+
+        -- Read the server state
+        modifyMVar_ server $ \s -> do
+            -- use an appropriate dispatcher depending on the app state
+            case s ^. appState of
+                Just gs -> talkGame msg client gs s
+                Nothing -> talkLobby msg client s
 
 attachClient :: Client -> MVar ServerState -> IO ()
 attachClient client server = flip finally disconnect $ do
@@ -168,9 +177,9 @@ attachClient client server = flip finally disconnect $ do
     talk server client
   where
     disconnect = do
-        s <- modifyMVar_ server $ \s ->
+        modifyMVar_ server $ \s ->
             let s' = removeClient (client ^. clientGuid) s
-             in return s'
+            in  return s'
         putStrLn $
             "Client" <> show (client ^. clientGuid) <> " disconnected"
 

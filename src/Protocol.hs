@@ -1,4 +1,6 @@
 {-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE OverloadedStrings #-}
+{-# OPTIONS_GHC -Wno-orphans #-}
 
 module Protocol (
     Request (..),
@@ -11,6 +13,10 @@ import Data.Text (Text)
 import GHC.Generics
 import Network.WebSockets (WebSocketsData (fromLazyByteString))
 import Types 
+import Lens.Micro
+import DevelopmentLookup
+
+import GameState
 
 ----------------------------------
 -- Types
@@ -43,3 +49,29 @@ encodeResponse = fromLazyByteString . encode
 instance FromJSON Request
 
 instance ToJSON Response
+
+instance ToJSON GemColor
+instance ToJSONKey GemColor
+instance ToJSON Player where
+    toJSON player =
+        let vps = sum $ map (developmentVp . getDevelopmentData) (player ^. pDevelopments)
+         in object
+                [ "tokens" .= (player ^. pTokens)
+                , "developments" .= (player ^. pDevelopments)
+                , "victoryPoints" .= vps
+                , "username" .= (player ^. pUsername)
+                , "turnOrder" .= (player ^. pTurnOrder)
+                ]
+
+instance ToJSON SplendorGame where
+    toJSON game =
+        let currentPlayer = fmap _pUsername (getCurrentTurnPlayer game)
+        in object
+            [ "players" .= (game ^. sgPlayers)
+            , "tokenBank" .= (game ^. sgBank)
+            , "decks" .= (game ^. sgDecks)
+            , "currentPlayer" .= currentPlayer
+            ]
+
+instance FromJSON GemColor
+instance FromJSON Action

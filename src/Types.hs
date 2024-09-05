@@ -1,14 +1,16 @@
 {-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE TupleSections #-}
 
 module Types (
     -- SplendorGame
-    SplendorGame,
+    SplendorGame(..),
     sgPlayers,
     sgBank,
     sgDecks,
+    sgPhase,
     playerL,
     -- Gems
     GemColor (..),
@@ -18,14 +20,12 @@ module Types (
     DevelopmentDeck,
     shownDevs,
     unshownDevs,
-
     -- Player
-    Player(..),
+    Player (..),
     pTokens,
-
-    -- Misc/Refile
-    newGame,
-
+    pDevelopments,
+    pUsername,
+    pTurnOrder,
     -- Action
     Action (..),
     -- Aliases
@@ -35,10 +35,11 @@ module Types (
     DevelopmentId,
 ) where
 
-import Control.Monad.Trans.State.Lazy
-import Data.Aeson
-import qualified Data.Map as M
 import GHC.Generics
+
+import Control.Monad.Trans.State.Lazy
+import qualified Data.Map as M
+
 import Lens.Micro
 import Lens.Micro.Platform ()
 import Lens.Micro.TH
@@ -50,22 +51,9 @@ data SplendorGame = SplendorGame
     { _sgPlayers :: M.Map Guid Player
     , _sgBank :: TokenPiles
     , _sgDecks :: [DevelopmentDeck]
+    , _sgPhase :: GamePhase
     }
     deriving (Generic, Show)
-
--- TODO refactor elsewhere
-newGame :: [Guid] -> SplendorGame
-newGame players =
-    let playerMap = M.fromList $ map (,newPlayer) players
-        bank = M.fromList $ map (,10) allColors
-        decks = []
-     in SplendorGame playerMap bank decks
-
-newPlayer :: Player
-newPlayer =
-    let tokens = M.fromList $ map (,0) allColors
-        developments = []
-     in Player developments tokens
 
 ----------------------------------
 -- Gems
@@ -96,7 +84,10 @@ type DevelopmentDeck = ([DevelopmentId], [DevelopmentId])
 data Player = Player
     { _pDevelopments :: [DevelopmentId]
     , _pTokens :: TokenPiles
-    }
+    , _pGold :: Int
+    , _pUsername :: String
+    , _pTurnOrder :: Int
+   }
     deriving (Generic, Show)
 
 ----------------------------------
@@ -109,17 +100,6 @@ data Action
     deriving (Generic, Show)
 
 ----------------------------------
--- Aeson Instances
-----------------------------------
-instance ToJSON GemColor
-instance ToJSONKey GemColor
-instance ToJSON Player
-instance ToJSON SplendorGame
-
-instance FromJSON GemColor
-instance FromJSON Action
-
-----------------------------------
 -- Aliases
 ----------------------------------
 type Update s a = StateT s (Either String) a
@@ -128,6 +108,9 @@ type Guid = String
 
 type TokenPiles = M.Map GemColor Int
 type DevelopmentId = Int
+
+-- For now, the game phase only consists of the turn
+type GamePhase = Int
 
 ----------------------------------
 -- Lenses
@@ -139,7 +122,8 @@ playerL :: Guid -> Traversal' SplendorGame Player
 playerL guid = sgPlayers . at guid . traversed
 
 unshownDevs :: Lens' DevelopmentDeck [DevelopmentId]
-unshownDevs = _2
+unshownDevs = _1
 
 shownDevs :: Lens' DevelopmentDeck [DevelopmentId]
 shownDevs = _2
+

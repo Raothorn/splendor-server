@@ -28,6 +28,7 @@ library
       Action
       DevelopmentLookup
       GameState
+      InitState
       Lib
       Player
       Protocol
