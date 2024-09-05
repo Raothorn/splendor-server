@@ -2,11 +2,14 @@
 module Util (
     useEither,
     addClamp,
-    maybeToEither
+    maybeToEither,
+    liftErr,
+    mapVals
 ) where
-
 import Control.Monad
 import Control.Monad.Trans.Class
+
+import qualified Data.Map as M
 
 import Lens.Micro
 import Lens.Micro.Mtl
@@ -19,7 +22,7 @@ useEither err l = do
     value <- use l
     case value of
         Just v -> return v
-        Nothing -> lift $ Left err
+        Nothing -> liftErr err
 
 maybeToEither :: b -> Maybe a -> Either b a
 maybeToEither err = maybe (Left err) Right
@@ -34,3 +37,9 @@ clamp (minVal, maxVal) n
         if n < minVal
             then minVal
             else min n maxVal
+
+liftErr :: String -> Update s a
+liftErr =  lift . Left
+
+mapVals :: M.Map k v -> [v]
+mapVals = map snd . M.toList

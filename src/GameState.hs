@@ -18,15 +18,15 @@ import Lens.Micro.Platform()
 import Types
 import Util
 
-----------------------------------
--- Normal functions
-----------------------------------
+-----------------------------------------
+-- Normal functions (for serialization)
+-----------------------------------------
 getCurrentTurnPlayer :: SplendorGame -> Maybe Player
 getCurrentTurnPlayer game = 
     let players = game ^. sgPlayers
-        turn = game ^. sgPhase `mod` length players
-        player =  M.toList (M.filter (\p -> p ^. pTurnOrder == turn) players)
-        res = player ^? _head . _2
+        turn = game ^. sgTurnNumber `mod` length players
+        player =  mapVals (M.filter (\p -> p ^. pTurnOrder == turn) players)
+        res = player ^? _head
     in res
 
 ----------------------------------
@@ -37,7 +37,7 @@ updateBankTokens f color = do
     prevAmt <- useEither "Cannot find tokens" (sgBank . at color)
     if f prevAmt >= 0
         then sgBank . at color . mapped .= f prevAmt
-        else lift $ Left "Not enough tokens in the pile to do that."
+        else liftErr "Not enough tokens in the pile to do that."
 
 
 -- If the chosen development exists and is shown, remove it.
@@ -49,7 +49,7 @@ removeShownDevelopment deckIx devId = do
         let (chosenDev, remaining) =  partition (== devId) shown
 
         case chosenDev of
-            [] -> lift $ Left "The chosen development doesn't exist"
+            [] -> liftErr "The chosen development doesn't exist"
             x:_ -> do
                 -- Update the shown cards
                 shownDevs .= remaining

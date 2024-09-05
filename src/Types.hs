@@ -6,15 +6,16 @@
 
 module Types (
     -- SplendorGame
-    SplendorGame(..),
+    SplendorGame (..),
     sgPlayers,
     sgBank,
     sgDecks,
-    sgPhase,
+    sgTurnNumber,
     playerL,
     -- Gems
     GemColor (..),
     allColors,
+    allColorsAndGold,
     -- Developments
     Development (..),
     DevelopmentDeck,
@@ -51,18 +52,22 @@ data SplendorGame = SplendorGame
     { _sgPlayers :: M.Map Guid Player
     , _sgBank :: TokenPiles
     , _sgDecks :: [DevelopmentDeck]
-    , _sgPhase :: GamePhase
+
+    , _sgTurnNumber :: Int
     }
     deriving (Generic, Show)
 
 ----------------------------------
 -- Gems
 ----------------------------------
-data GemColor = White | Blue | Green | Red | Black
+data GemColor = White | Blue | Green | Red | Black | Gold
     deriving (Generic, Show, Ord, Eq)
 
 allColors :: [GemColor]
 allColors = [White, Blue, Green, Red, Black]
+
+allColorsAndGold :: [GemColor]
+allColorsAndGold = [White, Blue, Green, Red, Black, Gold]
 
 ----------------------------------
 -- Developments
@@ -84,10 +89,9 @@ type DevelopmentDeck = ([DevelopmentId], [DevelopmentId])
 data Player = Player
     { _pDevelopments :: [DevelopmentId]
     , _pTokens :: TokenPiles
-    , _pGold :: Int
     , _pUsername :: String
     , _pTurnOrder :: Int
-   }
+    }
     deriving (Generic, Show)
 
 ----------------------------------
@@ -110,7 +114,7 @@ type TokenPiles = M.Map GemColor Int
 type DevelopmentId = Int
 
 -- For now, the game phase only consists of the turn
-type GamePhase = Int
+-- type GamePhase = Int
 
 ----------------------------------
 -- Lenses
@@ -126,4 +130,3 @@ unshownDevs = _1
 
 shownDevs :: Lens' DevelopmentDeck [DevelopmentId]
 shownDevs = _2
-
