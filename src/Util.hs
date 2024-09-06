@@ -17,7 +17,6 @@ import Lens.Micro.Mtl
 
 import Types
 
--- TODO make more general in case we zoom the state
 useEither :: String -> Lens' s (Maybe b) -> Update s b
 useEither err l = do
     value <- use l
