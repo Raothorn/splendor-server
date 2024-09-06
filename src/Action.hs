@@ -47,6 +47,9 @@ execAction pg (PurchaseDevelopment deckIx devId) = do
 
     -- Removes the development from the shown pile and shows a new one if possible
     removeShownDevelopment deckIx devId
+    
+    -- Give the development to the player
+    zoomPlayer pg $ giveDevelopment devId
 
     -- Increment the turn
     sgTurnNumber += 1

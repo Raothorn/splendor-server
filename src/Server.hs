@@ -208,4 +208,4 @@ application server pending = do
 runServer :: IO ()
 runServer = do
     server <- newMVar newServerState
-    WS.runServer "127.0.0.1" 9001 $ application server
+    WS.runServer "0.0.0.0" 9001 $ application server

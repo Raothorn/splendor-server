@@ -1,6 +1,7 @@
 module Player (
     zoomPlayer,
     updatePlayerTokens,
+    giveDevelopment
 ) where
 
 import Control.Monad
@@ -21,12 +22,12 @@ updatePlayerTokens f color = do
     let amount' = f amount
 
     when (amount' < 0) $ liftErr notEnoughErr
-    pTokens . at color . mapped .= f amount'
+    pTokens . at color . mapped .= amount'
   where
     notEnoughErr =
         "You do not have enough "
             <> show color
             <> " tokens to do that."
 
--- -- Getters (don't zoom in on the player for getters)
--- getPlayerTokens :: Guid -> Color -> Update SplendorGame Int
+giveDevelopment :: DevelopmentId -> Update Player ()
+giveDevelopment devId = pDevelopments %= (devId:)
