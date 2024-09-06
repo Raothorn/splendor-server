@@ -54,10 +54,11 @@ instance ToJSON GemColor
 instance ToJSONKey GemColor
 instance ToJSON Player where
     toJSON player =
-        let vps = sum $ map (developmentVp . getDevelopmentData) (player ^. pDevelopments)
+        let vps = sum $ map (developmentVp . getDevelopmentData) (player ^. pOwnedDevelopments)
          in object
                 [ "tokens" .= (player ^. pTokens)
-                , "developments" .= (player ^. pDevelopments)
+                , "ownedDevelopments" .= (player ^. pOwnedDevelopments)
+                , "reservedDevelopments" .= (player ^. pReservedDevelopments)
                 , "victoryPoints" .= vps
                 , "username" .= (player ^. pUsername)
                 , "turnOrder" .= (player ^. pTurnOrder)

@@ -32,10 +32,10 @@ newPlayer :: String -> Int -> Player
 newPlayer username order =
     let
         tokens = M.fromList $ map (,0) allColorsAndGold
-        developments = []
     in
         Player
-            { _pDevelopments = developments
+            { _pOwnedDevelopments = []
+            , _pReservedDevelopments = []
             , _pTokens = tokens
             , _pUsername = username
             , _pTurnOrder = order

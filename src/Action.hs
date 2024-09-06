@@ -3,11 +3,9 @@ module Action (
 ) where
 
 import Control.Monad
-import Control.Monad.Trans.State.Lazy
-import Debug.Trace
 
 import Lens.Micro
-import Lens.Micro.Mtl
+import Lens.Micro.Mtl hiding ((<%=))
 
 import DevelopmentLookup
 import GameState
@@ -49,8 +47,30 @@ execAction pg (PurchaseDevelopment deckIx devId) = do
     removeShownDevelopment deckIx devId
     
     -- Give the development to the player
-    zoomPlayer pg $ giveDevelopment devId
+    zoomPlayer pg $ pOwnedDevelopments %= (devId :)
 
+    -- Increment the turn
+    sgTurnNumber += 1
+
+----------------------------------
+-- ReserveDevelopment Action
+----------------------------------
+execAction pg (ReserveDevelopment deckIx devId) = do
+    -- Removes the development from the shown pile and shows a new one if possible
+    removeShownDevelopment deckIx devId
+
+    -- Reserve the development to the player 
+    zoomPlayer pg $ pReservedDevelopments %= (devId :)
+
+    -- Take a gold if possible
+    gold <- use $ sgBank . at Gold
+    let gold' = fmap (clamp (0, maxBound) . subtract 1) gold
+    sgBank . at Gold .= gold'
+
+    -- If a gold was taken, give it to the player
+    when (gold' < gold) $
+        zoomPlayer pg $ updatePlayerTokens (+ 1) Gold
+    
     -- Increment the turn
     sgTurnNumber += 1
 

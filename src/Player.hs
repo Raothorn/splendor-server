@@ -1,11 +1,9 @@
 module Player (
     zoomPlayer,
     updatePlayerTokens,
-    giveDevelopment
 ) where
 
 import Control.Monad
-import Control.Monad.Trans.Class
 
 import Lens.Micro
 import Lens.Micro.Mtl
@@ -29,5 +27,4 @@ updatePlayerTokens f color = do
             <> show color
             <> " tokens to do that."
 
-giveDevelopment :: DevelopmentId -> Update Player ()
-giveDevelopment devId = pDevelopments %= (devId:)
+

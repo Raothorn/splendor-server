@@ -1,12 +1,13 @@
 {-# LANGUAGE RankNTypes #-}
 module Util (
     useEither,
-    addClamp,
+    clamp,
     maybeToEither,
     liftErr,
-    mapVals
+    mapVals,
 ) where
 import Control.Monad
+import Control.Monad.State.Class
 import Control.Monad.Trans.Class
 
 import qualified Data.Map as M
@@ -27,9 +28,6 @@ useEither err l = do
 maybeToEither :: b -> Maybe a -> Either b a
 maybeToEither err = maybe (Left err) Right
 
-addClamp :: (Int, Int) -> Int -> Int -> Int
-addClamp range a b = clamp range (a + b)
-
 clamp :: (Int, Int) -> Int -> Int
 clamp (minVal, maxVal) n
     | minVal > maxVal = n
@@ -43,3 +41,4 @@ liftErr =  lift . Left
 
 mapVals :: M.Map k v -> [v]
 mapVals = map snd . M.toList
+

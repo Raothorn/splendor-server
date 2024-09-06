@@ -51,6 +51,7 @@ library
     , microlens-mtl
     , microlens-platform
     , microlens-th
+    , mtl
     , text
     , transformers
     , websockets
@@ -74,6 +75,7 @@ executable splendor-server-exe
     , microlens-mtl
     , microlens-platform
     , microlens-th
+    , mtl
     , splendor-server
     , text
     , transformers
@@ -99,6 +101,7 @@ test-suite splendor-server-test
     , microlens-mtl
     , microlens-platform
     , microlens-th
+    , mtl
     , splendor-server
     , text
     , transformers

@@ -24,7 +24,8 @@ module Types (
     -- Player
     Player (..),
     pTokens,
-    pDevelopments,
+    pOwnedDevelopments,
+    pReservedDevelopments,
     pUsername,
     pTurnOrder,
     -- Action
@@ -52,7 +53,6 @@ data SplendorGame = SplendorGame
     { _sgPlayers :: M.Map Guid Player
     , _sgBank :: TokenPiles
     , _sgDecks :: [DevelopmentDeck]
-
     , _sgTurnNumber :: Int
     }
     deriving (Generic, Show)
@@ -87,7 +87,8 @@ type DevelopmentDeck = ([DevelopmentId], [DevelopmentId])
 -- Player
 ----------------------------------
 data Player = Player
-    { _pDevelopments :: [DevelopmentId]
+    { _pOwnedDevelopments :: [DevelopmentId]
+    , _pReservedDevelopments :: [DevelopmentId]
     , _pTokens :: TokenPiles
     , _pUsername :: String
     , _pTurnOrder :: Int
@@ -101,6 +102,7 @@ data Action
     = NoAction
     | AcquireTokens [GemColor]
     | PurchaseDevelopment Int DevelopmentId
+    | ReserveDevelopment Int DevelopmentId
     deriving (Generic, Show)
 
 ----------------------------------
