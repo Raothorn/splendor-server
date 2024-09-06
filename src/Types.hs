@@ -96,12 +96,16 @@ data Player = Player
     deriving (Generic, Show)
 
 ----------------------------------
+-- TurnPhase
+----------------------------------
+
+----------------------------------
 -- Actions
 ----------------------------------
 data Action
     = NoAction
     | AcquireTokens [GemColor]
-    | PurchaseDevelopment Int DevelopmentId
+    | PurchaseDevelopment Int DevelopmentId [(GemColor, Int)]
     | ReserveDevelopment Int DevelopmentId
     deriving (Generic, Show)
 
