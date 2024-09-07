@@ -39,10 +39,10 @@ execAction pg (AcquireTokens colors) = do
 ----------------------------------
 execAction pg (PurchaseDevelopment deckIx devId goldAllocation) = do
     -- Allocate the gold jokers as the chosen gem type
-    -- forM_ goldAllocation $ \(color, amt) -> do
-    --     zoomPlayer pg $
-    --         updatePlayerTokens (subtract amt) Gold >>
-    --         updatePlayerTokens (+ amt) color
+    forM_ goldAllocation $ \(color, amt) -> 
+        zoomPlayer pg $ do
+            updatePlayerTokens (subtract amt) Gold
+            updatePlayerTokens (+ amt) color
 
     let devData = getDevelopmentData devId
 

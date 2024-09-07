@@ -17,6 +17,7 @@ import Lens.Micro
 import DevelopmentLookup
 
 import GameState
+import Player (getDevelopmentGems)
 
 ----------------------------------
 -- Types
@@ -57,6 +58,7 @@ instance ToJSON Player where
         let vps = sum $ map (developmentVp . getDevelopmentData) (player ^. pOwnedDevelopments)
          in object
                 [ "tokens" .= (player ^. pTokens)
+                , "developmentGems" .= getDevelopmentGems player
                 , "ownedDevelopments" .= (player ^. pOwnedDevelopments)
                 , "reservedDevelopments" .= (player ^. pReservedDevelopments)
                 , "victoryPoints" .= vps
