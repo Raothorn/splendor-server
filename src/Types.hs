@@ -8,15 +8,6 @@ module Types (
     -- SplendorGame
     SplendorGame,
     mkSplendorGame,
-    -- Gems
-    GemColor (..),
-    allColors,
-    allColorsAndGold,
-    -- Developments
-    Development (..),
-    DevelopmentDeck,
-    shownDevs,
-    unshownDevs,
     -- Player
     Player,
     mkPlayer,
@@ -35,9 +26,11 @@ import GHC.Generics
 import Control.Monad.Trans.State.Lazy
 import qualified Data.Map as M
 
-import Lens.Micro
 import Lens.Micro.Platform ()
 import Lens.Micro.TH
+
+import Types.Development
+import Types.GemColor
 
 ----------------------------------
 -- GameState
@@ -62,31 +55,6 @@ mkSplendorGame ::
     SplendorGame
 mkSplendorGame = SplendorGame
 
-----------------------------------
--- Gems
-----------------------------------
-data GemColor = White | Blue | Green | Red | Black | Gold
-    deriving (Generic, Show, Ord, Eq)
-
-allColors :: [GemColor]
-allColors = [White, Blue, Green, Red, Black]
-
-allColorsAndGold :: [GemColor]
-allColorsAndGold = [White, Blue, Green, Red, Black, Gold]
-
-----------------------------------
--- Developments
-----------------------------------
-data Development = Development
-    { developmentGem :: GemColor
-    , developmentCost :: [(GemColor, Int)]
-    , developmentVp :: Int
-    , developmentId :: DevelopmentId
-    }
-    deriving (Generic, Show)
-
--- The first value in the tuple is the unshown cards, the second is the shown
-type DevelopmentDeck = ([DevelopmentId], [DevelopmentId])
 
 ----------------------------------
 -- Player
@@ -136,7 +104,6 @@ type Update s a = StateT s (Either String) a
 type Guid = String
 
 type TokenPiles = M.Map GemColor Int
-type DevelopmentId = Int
 
 type GameMessage = String
 
@@ -148,8 +115,3 @@ type GameMessage = String
 ----------------------------------
 makeLenses ''SplendorGame
 
-unshownDevs :: Lens' DevelopmentDeck [DevelopmentId]
-unshownDevs = _1
-
-shownDevs :: Lens' DevelopmentDeck [DevelopmentId]
-shownDevs = _2

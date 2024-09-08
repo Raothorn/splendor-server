@@ -9,13 +9,16 @@ import Lens.Micro
 import Lens.Micro.Mtl
 
 import qualified Data.Map as M
-import DevelopmentLookup
+import qualified Data.List as L
 import qualified GameOptions as Op
 import GameState
 import qualified Lenses.GameLenses as G
 import qualified Lenses.PlayerLenses as P
+import qualified Lenses.DevelopmentLenses as D
 import Player
 import Types
+import Types.GemColor
+import Types.Development
 import Util
 
 execAction :: Guid -> Action -> Update SplendorGame (Maybe GameMessage)
@@ -58,18 +61,24 @@ execAction pg (PurchaseDevelopment devId goldAllocation) = do
 
     devGems <- getPlayer pg <&> getDevelopmentGems
 
-    let devData = getDevelopmentData devId
+    let devData = devId ^. lookupDev
 
     forM_ allColors $ \color -> do
-        -- The cost for this gem type
-        let cost = getGemCost color devData - (devGems M.! color)
+        -- The bonus the player gets from developments
+        devBonus <- liftMaybe (M.lookup color devGems)
+
+        -- The cost for this gem type after the bonus
+        devCost <- liftMaybe (L.lookup color $ devData ^. D.cost)
+
+        -- The actual amount of tokens the player needs to spend
+        let playerCost = devCost - devBonus
 
         -- Removes the tokens from the player pile. If they do not
         -- have enough, this will propogate an error
-        zoomPlayer pg $ updatePlayerTokens (subtract cost) color
+        zoomPlayer pg $ updatePlayerTokens (subtract playerCost) color
 
         -- Add the token back to the bank
-        updateBankTokens (+ cost) color
+        updateBankTokens (+ playerCost) color
 
     -- Determine if the development is coming from the board or the player's reserve
     isReserve <- getPlayer pg <&> hasReservedDevelopment devId
@@ -87,13 +96,14 @@ execAction pg (PurchaseDevelopment devId goldAllocation) = do
     notif <-
         if vps >= Op.vpsToWin
             then do
-                G.lastRound .= True 
+                G.lastRound .= True
                 player <- getPlayer pg
-                return $ Just $ 
-                    "Player " <> player ^. P.username <>
-                    " has reached 15 victory points. The " <>
-                    " game will be over at the end of this round"
-
+                return $
+                    Just $
+                        "Player "
+                            <> player ^. P.username
+                            <> " has reached 15 victory points. The "
+                            <> " game will be over at the end of this round"
             else return Nothing
 
     advanceTurn

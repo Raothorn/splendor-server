@@ -21,14 +21,15 @@ import Lens.Micro.TH (makeLenses)
 
 import qualified Network.WebSockets as WS
 
-import DevelopmentLookup
 import Action
 import Protocol
 import Types
+import Types.Development
 import InitState
 import Player (canAfford)
 
 import qualified Lenses.GameLenses as G
+import qualified Lenses.DevelopmentLenses as D
 ----------------------------------
 -- Types
 ----------------------------------
@@ -128,7 +129,7 @@ talkLobby msg client server = do
 respondQuery :: Query -> SplendorGame -> IO Response
 
 respondQuery (DevelopmentCostQ devId) _ = do
-    let cost = developmentCost $ getDevelopmentData devId
+    let cost = devId ^. lookupDev . D.cost
     return $ QueryResponse (DevelopmentCostR cost)
 
 respondQuery (CanAffordQ pg devId) gs = do

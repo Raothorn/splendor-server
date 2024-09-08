@@ -15,10 +15,13 @@ import Lens.Micro
 import Lens.Micro.Mtl
 
 import DevelopmentLookup
-import Types
-import Util
-import qualified Lenses.PlayerLenses as P
+import qualified Lenses.DevelopmentLenses as D
 import qualified Lenses.GameLenses as G
+import qualified Lenses.PlayerLenses as P
+import Types
+import Types.Development
+import Types.GemColor
+import Util
 
 ----------------------------------
 -- Normal functions
@@ -26,32 +29,32 @@ import qualified Lenses.GameLenses as G
 getDevelopmentGems :: Player -> TokenPiles
 getDevelopmentGems player = M.fromList $ map (\c -> (c, getGemAmt c)) allColors
   where
-    developments = map getDevelopmentData (player ^. P.ownedDevelopments)
-    getGemAmt c = length (filter (\d -> developmentGem d == c) developments)
+    developments = player ^. P.ownedDevelopments ^.. each . lookupDev
+    getGemAmt c = length (filter (\d -> d ^. D.gem == c) developments)
 
 canAfford :: Player -> DevelopmentId -> Bool
 canAfford player devId =
-    let
-        cost = developmentCost $ getDevelopmentData devId
+    let cost = devId ^. lookupDev . D.cost
         playerTokens = player ^. P.tokens
         devGems = getDevelopmentGems player
         calcRemaining (color, amt) =
             max 0 $ amt - (playerTokens M.! color) - (devGems M.! color)
         remaining = map calcRemaining cost
-    in
-        sum remaining <= playerTokens M.! Gold
+    in  sum remaining <= playerTokens M.! Gold
 
 getVictoryPoints :: Player -> Int
-getVictoryPoints player = 
-    sum $ map (developmentVp . getDevelopmentData) (player ^. P.ownedDevelopments)
+getVictoryPoints player = sum devVps
+  where
+    devVps = player ^. P.ownedDevelopments ^.. each . lookupDev ^.. each . D.pp
 
 hasReservedDevelopment :: Int -> Player -> Bool
 hasReservedDevelopment devId player = devId `elem` player ^. P.reservedDevelopments
+
 ----------------------------------
 -- Stateful functions
 ----------------------------------
 zoomPlayer :: Guid -> Update Player () -> Update SplendorGame ()
-zoomPlayer pg = 
+zoomPlayer pg =
     zoom (G.players . at pg . traversed)
 
 updatePlayerTokens :: (Int -> Int) -> GemColor -> Update Player ()

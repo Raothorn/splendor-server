@@ -10,6 +10,9 @@ import Data.Foldable (toList)
 import Data.Sequence (fromList, mapWithIndex)
 import Types
 
+import Types.Development
+import Types.GemColor
+
 newGame :: [(Guid, String)] -> SplendorGame
 newGame players =
     let

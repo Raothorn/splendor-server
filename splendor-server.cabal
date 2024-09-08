@@ -30,6 +30,7 @@ library
       GameOptions
       GameState
       InitState
+      Lenses.DevelopmentLenses
       Lenses.GameLenses
       Lenses.PlayerLenses
       Lib
@@ -37,6 +38,8 @@ library
       Protocol
       Server
       Types
+      Types.Development
+      Types.GemColor
       Util
   other-modules:
       Paths_splendor_server

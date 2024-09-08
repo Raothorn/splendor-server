@@ -18,13 +18,15 @@ import Lens.Micro
 import Lens.Micro.Mtl
 import Lens.Micro.Platform ()
 
-import DevelopmentLookup (getDeckIndex)
-import Types
-import Util
 
 import qualified Lenses.GameLenses as G
 import qualified Lenses.PlayerLenses as P
-import Player (getVictoryPoints)
+import Player 
+import DevelopmentLookup 
+import Util
+import Types
+import Types.GemColor
+import Types.Development
 
 -----------------------------------------
 -- Normal functions (for serialization)
@@ -70,7 +72,7 @@ updateBankTokens f color = do
 -- Then try to replace it with another development from the unshown decks
 removeShownDevelopment :: DevelopmentId -> Update SplendorGame ()
 removeShownDevelopment devId = do
-    let deckIx = getDeckIndex devId
+    let deckIx = lookupDeck devId
     zoom (G.decks . ix deckIx) $ do
         shown <- use shownDevs
         let (chosenDev, remaining) = L.partition (== devId) shown

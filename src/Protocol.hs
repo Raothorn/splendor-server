@@ -15,6 +15,7 @@ import Data.Text (Text)
 import GHC.Generics
 import Network.WebSockets (WebSocketsData (fromLazyByteString))
 import Types
+import Types.GemColor
 import Lens.Micro
 
 import GameState
