@@ -1,8 +1,3 @@
-{-# LANGUAGE TemplateHaskell #-}
-module Lenses.GameLenses where
+module Lenses.GameLenses (
+) where
 
-import Lens.Micro.TH
-
-import Types
-
-makeLenses ''SplendorGame
