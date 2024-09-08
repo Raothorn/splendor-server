@@ -1,5 +1,6 @@
 {-# LANGUAGE RankNTypes #-}
 module GameState (
+    getBankTokens,
     updateBankTokens,
     removeShownDevelopment,
     getCurrentTurnPlayer
@@ -18,6 +19,7 @@ import Lens.Micro.Platform()
 import Types
 import Util
 import DevelopmentLookup (getDeckIndex)
+import Data.Maybe
 
 -----------------------------------------
 -- Normal functions (for serialization)
@@ -33,6 +35,9 @@ getCurrentTurnPlayer game =
 ----------------------------------
 -- Stateful functions
 ----------------------------------
+getBankTokens :: GemColor -> Update SplendorGame Int
+getBankTokens color = use $ sgBank . at color . to (fromMaybe 0)
+
 updateBankTokens :: (Int -> Int) -> GemColor -> Update SplendorGame ()
 updateBankTokens f color = do
     prevAmt <- useEither "Cannot find tokens" (sgBank . at color)

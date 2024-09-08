@@ -19,17 +19,23 @@ execAction :: Guid -> Action -> Update SplendorGame ()
 -- AcquireTokens Action
 ----------------------------------
 execAction pg (AcquireTokens colors) = do
-    amt <- case length colors of
+    -- If 2 of one color token is taken, there must be 4 in the pile
+    (requires4, amt) <- case length colors of
         -- If only one color is chosen, take 2
-        1 -> return 2
+        1 -> return (True, 2)
         -- If three colors are chosen, take one of each
-        3 -> return 1
+        3 -> return (False, 2)
         _ -> liftErr "You must select 3 tokens of different colors, or 2 of the same color"
 
     -- For each color chosen, remove 'amt' from the pile and give it to the player
     forM_ colors $ \c -> do
         when (c == Gold) $
             liftErr "You cannot choose a gold token for this action"
+        
+        tokens <- getBankTokens c
+        when (requires4 && tokens < 4) $
+            liftErr "You can't perform this action unless there are at least 4 tokens in the pile"
+
         updateBankTokens (subtract amt) c
         zoomPlayer pg $ updatePlayerTokens (+ amt) c
 

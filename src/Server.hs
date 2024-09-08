@@ -231,8 +231,6 @@ application server pending = do
 
 runServer :: IO ()
 runServer = do
-    let q = QueryRequest (DevelopmentCostQ 1)
-    let q_enc = encode q
-    T.putStrLn (fromLazyByteString q_enc)
+    putStrLn "Listening on 9001..."
     server <- newMVar newServerState
     WS.runServer "0.0.0.0" 9001 $ application server
