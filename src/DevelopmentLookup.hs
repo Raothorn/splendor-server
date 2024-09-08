@@ -1,6 +1,7 @@
 module DevelopmentLookup (
     getDevelopmentData,
     getGemCost,
+    getDeckIndex
 ) where
 
 import Data.Maybe
@@ -14,6 +15,12 @@ getDevelopmentData devId =
         costs' = zip allColors costs
      in
         Development gem costs' vp devId
+
+getDeckIndex :: DevelopmentId -> Int
+getDeckIndex n
+    | n <= 40 = 0
+    | n <= 70 = 1
+    | otherwise = 2
 
 getGemCost :: GemColor -> Development -> Int
 getGemCost color development = fromMaybe 0 $ lookup color (developmentCost development)

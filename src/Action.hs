@@ -12,6 +12,7 @@ import GameState
 import Player
 import Types
 import Util
+import qualified Data.Map as M
 
 execAction :: Guid -> Action -> Update SplendorGame ()
 ----------------------------------
@@ -37,18 +38,20 @@ execAction pg (AcquireTokens colors) = do
 ----------------------------------
 -- PurchaseDevelopment Action
 ----------------------------------
-execAction pg (PurchaseDevelopment deckIx devId goldAllocation) = do
+execAction pg (PurchaseDevelopment devId goldAllocation) = do
     -- Allocate the gold jokers as the chosen gem type
     forM_ goldAllocation $ \(color, amt) -> 
         zoomPlayer pg $ do
             updatePlayerTokens (subtract amt) Gold
             updatePlayerTokens (+ amt) color
 
+    devGems <- use $ playerL pg . to getDevelopmentGems
+            
     let devData = getDevelopmentData devId
 
     forM_ allColors $ \color -> do
         -- The cost for this gem type
-        let cost = getGemCost color devData
+        let cost = getGemCost color devData - (devGems M.! color)
 
         -- Removes the tokens from the player pile. If they do not
         -- have enough, this will propogate an error
@@ -57,8 +60,13 @@ execAction pg (PurchaseDevelopment deckIx devId goldAllocation) = do
         -- Add the token back to the bank
         updateBankTokens (+ cost) color
 
-    -- Removes the development from the shown pile and shows a new one if possible
-    removeShownDevelopment deckIx devId
+    -- Determine if the development is coming from the board or the player's reserve
+    isReserve <- hasReservedDevelopment pg devId
+    if isReserve
+        -- Remove the card from the player's reserve
+        then zoomPlayer pg $ removeReservedDevelopment devId
+        -- Removes the development from the shown pile and shows a new one if possible
+        else removeShownDevelopment devId
 
     -- Give the development to the player
     zoomPlayer pg $ pOwnedDevelopments %= (devId :)
@@ -69,9 +77,9 @@ execAction pg (PurchaseDevelopment deckIx devId goldAllocation) = do
 ----------------------------------
 -- ReserveDevelopment Action
 ----------------------------------
-execAction pg (ReserveDevelopment deckIx devId) = do
+execAction pg (ReserveDevelopment devId) = do
     -- Removes the development from the shown pile and shows a new one if possible
-    removeShownDevelopment deckIx devId
+    removeShownDevelopment devId
 
     -- Reserve the development to the player
     zoomPlayer pg $ pReservedDevelopments %= (devId :)

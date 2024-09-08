@@ -5,6 +5,8 @@
 module Protocol (
     Request (..),
     Response (..),
+    Query (..),
+    QueryResponse (..),
     encodeResponse,
 ) where
 
@@ -17,7 +19,7 @@ import Lens.Micro
 import DevelopmentLookup
 
 import GameState
-import Player (getDevelopmentGems)
+import Player 
 
 ----------------------------------
 -- Types
@@ -29,6 +31,8 @@ data Request
     | ConnectRequest String
     | StartGameRequest
     | ReadyToPlayRequest
+    | ActionRequest Action
+    | QueryRequest Query
     | NoRequest
     deriving (Generic, Show)
 
@@ -37,7 +41,7 @@ data Response
     = LobbyUpdate [String]
     | GameUpdate SplendorGame
     | JoinLobbySuccess String
-    | ErrorNotification String
+    | ErrorNotification String  | QueryResponse QueryResponse
     | NoResponse
     deriving (Generic, Show)
 
@@ -45,11 +49,33 @@ encodeResponse :: Response -> Text
 encodeResponse = fromLazyByteString . encode
 
 ----------------------------------
+-- Query
+----------------------------------
+data Query 
+    = DevelopmentCostQ DevelopmentId
+    | CanAffordQ Guid DevelopmentId
+    | NoQ
+    deriving (Generic, Show)
+
+data QueryResponse
+    = DevelopmentCostR [(GemColor, Int)]
+    | CanAffordR Bool
+    | NoR
+    deriving (Generic, Show)
+
+----------------------------------
 -- Aeson Instances
 ----------------------------------
+instance FromJSON Query
 instance FromJSON Request
 
+instance ToJSON QueryResponse
 instance ToJSON Response
+
+-- for testing
+instance ToJSON Query
+instance ToJSON Action
+instance ToJSON Request 
 
 instance ToJSON GemColor
 instance ToJSONKey GemColor

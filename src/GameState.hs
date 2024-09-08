@@ -17,6 +17,7 @@ import Lens.Micro.Platform()
 
 import Types
 import Util
+import DevelopmentLookup (getDeckIndex)
 
 -----------------------------------------
 -- Normal functions (for serialization)
@@ -42,8 +43,9 @@ updateBankTokens f color = do
 
 -- If the chosen development exists and is shown, remove it.
 -- Then try to replace it with another development from the unshown decks
-removeShownDevelopment :: Int -> DevelopmentId -> Update SplendorGame ()
-removeShownDevelopment deckIx devId = do
+removeShownDevelopment :: DevelopmentId -> Update SplendorGame ()
+removeShownDevelopment devId = do
+    let deckIx = getDeckIndex devId
     zoom (sgDecks . ix deckIx) $ do
         shown <- use shownDevs
         let (chosenDev, remaining) =  partition (== devId) shown

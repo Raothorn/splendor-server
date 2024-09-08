@@ -21,10 +21,13 @@ import Lens.Micro.TH (makeLenses)
 
 import qualified Network.WebSockets as WS
 
+import DevelopmentLookup
 import Action
 import Protocol
 import Types
 import InitState
+import Network.WebSockets (WebSocketsData(fromLazyByteString))
+import Player (canAfford)
 ----------------------------------
 -- Types
 ----------------------------------
@@ -121,13 +124,27 @@ talkLobby msg client server = do
         Just request -> handleLobbyMessage request client server
         Nothing -> return server
 
+respondQuery :: Query -> SplendorGame -> IO Response
+
+respondQuery (DevelopmentCostQ devId) _ = do
+    let cost = developmentCost $ getDevelopmentData devId
+    return $ QueryResponse (DevelopmentCostR cost)
+
+respondQuery (CanAffordQ pg devId) gs = do
+    let player = gs ^. sgPlayers . at pg 
+
+    case player of
+        Just p -> return $ QueryResponse (CanAffordR (canAfford p devId))
+        Nothing -> return $ QueryResponse NoR
+    
+respondQuery _ _ = return $ QueryResponse NoR
 
 talkGame :: BS.ByteString -> Client -> SplendorGame -> ServerState -> IO ServerState
 talkGame msg client gs server = do
-    let decodedMessage = decode msg :: Maybe Action
+    let decodedMessage = decode msg :: Maybe Request
 
     case decodedMessage of
-        Just action -> do
+        Just (ActionRequest action) -> do
             putStrLn $ "Received action " <> show action
             let actionResult = execStateT (execAction (client ^. clientGuid) action) gs
 
@@ -143,8 +160,15 @@ talkGame msg client gs server = do
                     print gs'
                     broadcastMessage (GameUpdate gs') server
                     return (server & appState ?~ gs')
-        Nothing -> do
-            putStrLn $ "Cannot parse action " <> show msg
+
+        Just (QueryRequest query) -> do
+            putStrLn $ "Recieved query: " <> show query
+            response <- respondQuery query gs
+            sendMessage response client
+            return server
+
+        _ -> do
+            putStrLn $ "Cannot parse client request " <> show msg
             return server
 
 
@@ -207,5 +231,8 @@ application server pending = do
 
 runServer :: IO ()
 runServer = do
+    let q = QueryRequest (DevelopmentCostQ 1)
+    let q_enc = encode q
+    T.putStrLn (fromLazyByteString q_enc)
     server <- newMVar newServerState
     WS.runServer "0.0.0.0" 9001 $ application server

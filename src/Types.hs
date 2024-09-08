@@ -105,8 +105,8 @@ data Player = Player
 data Action
     = NoAction
     | AcquireTokens [GemColor]
-    | PurchaseDevelopment Int DevelopmentId [(GemColor, Int)]
-    | ReserveDevelopment Int DevelopmentId
+    | PurchaseDevelopment DevelopmentId [(GemColor, Int)]
+    | ReserveDevelopment DevelopmentId
     deriving (Generic, Show)
 
 ----------------------------------
