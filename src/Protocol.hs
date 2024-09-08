@@ -42,7 +42,9 @@ data Response
     = LobbyUpdate [String]
     | GameUpdate SplendorGame
     | JoinLobbySuccess String
-    | ErrorNotification String  | QueryResponse QueryResponse
+    | Notification GameMessage
+    | ErrorNotification String  
+    | QueryResponse QueryResponse
     | NoResponse
     deriving (Generic, Show)
 
@@ -64,6 +66,7 @@ data QueryResponse
     | NoR
     deriving (Generic, Show)
 
+
 ----------------------------------
 -- Aeson Instances
 ----------------------------------
@@ -74,9 +77,9 @@ instance ToJSON QueryResponse
 instance ToJSON Response
 
 -- for testing
-instance ToJSON Query
-instance ToJSON Action
-instance ToJSON Request
+-- instance ToJSON Query
+-- instance ToJSON Action
+-- instance ToJSON Request
 
 instance ToJSON GemColor
 instance ToJSONKey GemColor
@@ -100,6 +103,7 @@ instance ToJSON SplendorGame where
             , "tokenBank" .= (game ^. G.bank)
             , "decks" .= (game ^. G.decks)
             , "currentPlayer" .= currentPlayer
+            , "gameOverSummary" .= (game ^. G.gameOver)
             ]
 
 instance FromJSON GemColor

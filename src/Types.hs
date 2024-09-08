@@ -6,7 +6,7 @@
 
 module Types (
     -- SplendorGame
-    SplendorGame ,
+    SplendorGame,
     mkSplendorGame,
     -- Gems
     GemColor (..),
@@ -20,7 +20,6 @@ module Types (
     -- Player
     Player,
     mkPlayer,
-    
     -- Action
     Action (..),
     -- Aliases
@@ -28,6 +27,7 @@ module Types (
     TokenPiles,
     Guid,
     DevelopmentId,
+    GameMessage,
 ) where
 
 import GHC.Generics
@@ -43,15 +43,23 @@ import Lens.Micro.TH
 -- GameState
 ----------------------------------
 data SplendorGame = SplendorGame
-    { _players    :: M.Map Guid Player
-    , _bank       :: TokenPiles
-    , _decks      :: [DevelopmentDeck]
+    { _players :: M.Map Guid Player
+    , _bank :: TokenPiles
+    , _decks :: [DevelopmentDeck]
     , _turnNumber :: Int
-    , _lastRound  :: Bool
+    , _lastRound :: Bool
+    , _gameOver :: Maybe GameOverSummary
     }
     deriving (Generic, Show)
 
-mkSplendorGame :: M.Map Guid Player -> TokenPiles -> [DevelopmentDeck] -> Int -> Bool -> SplendorGame
+mkSplendorGame ::
+    M.Map Guid Player ->
+    TokenPiles ->
+    [DevelopmentDeck] ->
+    Int ->
+    Bool ->
+    Maybe GameOverSummary ->
+    SplendorGame
 mkSplendorGame = SplendorGame
 
 ----------------------------------
@@ -92,11 +100,23 @@ data Player = Player
     }
     deriving (Generic, Show)
 
-mkPlayer :: [DevelopmentId] -> [DevelopmentId] -> TokenPiles -> String -> Int -> Player
+mkPlayer ::
+    [DevelopmentId] ->
+    [DevelopmentId] ->
+    TokenPiles ->
+    String ->
+    Int ->
+    Player
 mkPlayer = Player
+
 ----------------------------------
 -- TurnPhase
 ----------------------------------
+
+----------------------------------
+-- GameOverSummary
+----------------------------------
+type GameOverSummary = String
 
 ----------------------------------
 -- Actions
@@ -117,6 +137,8 @@ type Guid = String
 
 type TokenPiles = M.Map GemColor Int
 type DevelopmentId = Int
+
+type GameMessage = String
 
 -- For now, the game phase only consists of the turn
 -- type GamePhase = Int

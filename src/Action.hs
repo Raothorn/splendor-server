@@ -8,17 +8,17 @@ import Data.Functor
 import Lens.Micro
 import Lens.Micro.Mtl
 
+import qualified Data.Map as M
 import DevelopmentLookup
+import qualified GameOptions as Op
 import GameState
+import qualified Lenses.GameLenses as G
+import qualified Lenses.PlayerLenses as P
 import Player
 import Types
 import Util
-import qualified Data.Map as M
-import qualified GameOptions as Op
-import qualified Lenses.PlayerLenses as P
-import qualified Lenses.GameLenses as G
 
-execAction :: Guid -> Action -> Update SplendorGame ()
+execAction :: Guid -> Action -> Update SplendorGame (Maybe GameMessage)
 ----------------------------------
 -- AcquireTokens Action
 ----------------------------------
@@ -43,7 +43,8 @@ execAction pg (AcquireTokens colors) = do
         updateBankTokens (subtract amt) c
         zoomPlayer pg $ updatePlayerTokens (+ amt) c
 
-    G.turnNumber += 1
+    advanceTurn
+    return Nothing
 
 ----------------------------------
 -- PurchaseDevelopment Action
@@ -71,23 +72,32 @@ execAction pg (PurchaseDevelopment devId goldAllocation) = do
         updateBankTokens (+ cost) color
 
     -- Determine if the development is coming from the board or the player's reserve
-    isReserve <- getPlayer pg <&> hasReservedDevelopment 0 
+    isReserve <- getPlayer pg <&> hasReservedDevelopment devId
     if isReserve
-        -- Remove the card from the player's reserve
-        then zoomPlayer pg $ removeReservedDevelopment devId
-        -- Removes the development from the shown pile and shows a new one if possible
-        else removeShownDevelopment devId
+        then -- Remove the card from the player's reserve
+            zoomPlayer pg $ removeReservedDevelopment devId
+        else -- Removes the development from the shown pile and shows a new one if possible
+            removeShownDevelopment devId
 
     -- Give the development to the player
     zoomPlayer pg $ P.ownedDevelopments %= (devId :)
 
     -- If the player now has 15 or more victory points, set the "last round" flag
     vps <- getPlayer pg <&> getVictoryPoints
-    when (vps >= Op.vpsToWin) $
-        G.lastRound .= True  
+    notif <-
+        if vps >= Op.vpsToWin
+            then do
+                G.lastRound .= True 
+                player <- getPlayer pg
+                return $ Just $ 
+                    "Player " <> player ^. P.username <>
+                    " has reached 15 victory points. The " <>
+                    " game will be over at the end of this round"
 
-    -- Increment the turn
-    G.turnNumber += 1
+            else return Nothing
+
+    advanceTurn
+    return notif
 
 ----------------------------------
 -- ReserveDevelopment Action
@@ -109,6 +119,6 @@ execAction pg (ReserveDevelopment devId) = do
         zoomPlayer pg $
             updatePlayerTokens (+ 1) Gold
 
-    -- Increment the turn
-    G.turnNumber += 1
-execAction _ _ = return ()
+    advanceTurn
+    return Nothing
+execAction _ _ = return Nothing

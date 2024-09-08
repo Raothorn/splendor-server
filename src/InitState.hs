@@ -21,7 +21,7 @@ newGame players =
         deck2 = draw 5 ([71 .. 90], [])
         decks = [deck0, deck1, deck2]
     in
-        mkSplendorGame playerMap bank decks 0 False
+        mkSplendorGame playerMap bank decks 0 False Nothing
 
 newPlayer :: String -> Int -> Player
 newPlayer username order =

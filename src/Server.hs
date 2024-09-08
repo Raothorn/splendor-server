@@ -147,18 +147,23 @@ talkGame msg client gs server = do
     case decodedMessage of
         Just (ActionRequest action) -> do
             putStrLn $ "Received action " <> show action
-            let actionResult = execStateT (execAction (client ^. clientGuid) action) gs
+            let actionResult = runStateT (execAction (client ^. clientGuid) action) gs
 
             case actionResult of
                 Left err -> do
                     putStrLn $ "Error: " <> err
                     sendMessage (ErrorNotification err) client
                     return server
-                Right gs' -> do
+                Right (notif, gs') -> do
                     putStrLn "----OLD-----"
                     print gs
                     putStrLn "----NEW-----"
                     print gs'
+                    
+                    case notif of 
+                        Just n -> broadcastMessage (Notification n) server
+                        Nothing -> return ()
+
                     broadcastMessage (GameUpdate gs') server
                     return (server & appState ?~ gs')
 

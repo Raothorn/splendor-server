@@ -6,6 +6,7 @@ module Util (
     maybeToEither,
     liftErr,
     mapVals,
+    maximumByL
 ) where
 import Control.Monad
 import Control.Monad.State.Class
@@ -48,4 +49,12 @@ liftErr =  lift . Left
 
 mapVals :: M.Map k v -> [v]
 mapVals = map snd . M.toList
+
+maximumByL :: (Foldable t, Ord n) => SimpleGetter a n -> t a -> a
+maximumByL l = foldr1 f
+    where
+        f x mx = if x ^. l > mx ^. l then x else mx
+
+
+
 
