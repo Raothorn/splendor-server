@@ -118,7 +118,7 @@ execAction pg (ReserveDevelopment devId) = do
     zoomPlayer pg $ P.reservedDevelopments %= (devId :)
 
     -- Take a gold if possible
-    gold <- useEither' $ G.bank . at Gold
+    gold <- useEither "Cannot find gold in the bank" $ G.bank . at Gold
     let gold' = (clamp (0, maxBound) . subtract 1) gold
     G.bank . at Gold ?= gold'
 

@@ -28,7 +28,6 @@ library
       DevelopmentLookup
       ExecAction
       GameOptions
-      InitState
       Lenses.DevelopmentLenses
       Lenses.GameLenses
       Lenses.PlayerLenses
