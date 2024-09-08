@@ -6,12 +6,8 @@
 
 module Types (
     -- SplendorGame
-    SplendorGame (..),
-    sgPlayers,
-    sgBank,
-    sgDecks,
-    sgTurnNumber,
-    playerL,
+    SplendorGame ,
+    mkSplendorGame,
     -- Gems
     GemColor (..),
     allColors,
@@ -22,12 +18,9 @@ module Types (
     shownDevs,
     unshownDevs,
     -- Player
-    Player (..),
-    pTokens,
-    pOwnedDevelopments,
-    pReservedDevelopments,
-    pUsername,
-    pTurnOrder,
+    Player,
+    mkPlayer,
+    
     -- Action
     Action (..),
     -- Aliases
@@ -50,12 +43,16 @@ import Lens.Micro.TH
 -- GameState
 ----------------------------------
 data SplendorGame = SplendorGame
-    { _sgPlayers :: M.Map Guid Player
-    , _sgBank :: TokenPiles
-    , _sgDecks :: [DevelopmentDeck]
-    , _sgTurnNumber :: Int
+    { _players    :: M.Map Guid Player
+    , _bank       :: TokenPiles
+    , _decks      :: [DevelopmentDeck]
+    , _turnNumber :: Int
+    , _lastRound  :: Bool
     }
     deriving (Generic, Show)
+
+mkSplendorGame :: M.Map Guid Player -> TokenPiles -> [DevelopmentDeck] -> Int -> Bool -> SplendorGame
+mkSplendorGame = SplendorGame
 
 ----------------------------------
 -- Gems
@@ -87,14 +84,16 @@ type DevelopmentDeck = ([DevelopmentId], [DevelopmentId])
 -- Player
 ----------------------------------
 data Player = Player
-    { _pOwnedDevelopments :: [DevelopmentId]
-    , _pReservedDevelopments :: [DevelopmentId]
-    , _pTokens :: TokenPiles
-    , _pUsername :: String
-    , _pTurnOrder :: Int
+    { _ownedDevelopments :: [DevelopmentId]
+    , _reservedDevelopments :: [DevelopmentId]
+    , _tokens :: TokenPiles
+    , _username :: String
+    , _turnOrder :: Int
     }
     deriving (Generic, Show)
 
+mkPlayer :: [DevelopmentId] -> [DevelopmentId] -> TokenPiles -> String -> Int -> Player
+mkPlayer = Player
 ----------------------------------
 -- TurnPhase
 ----------------------------------
@@ -126,10 +125,6 @@ type DevelopmentId = Int
 -- Lenses
 ----------------------------------
 makeLenses ''SplendorGame
-makeLenses ''Player
-
-playerL :: Guid -> Traversal' SplendorGame Player
-playerL guid = sgPlayers . at guid . traversed
 
 unshownDevs :: Lens' DevelopmentDeck [DevelopmentId]
 unshownDevs = _1

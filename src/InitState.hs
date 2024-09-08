@@ -21,25 +21,14 @@ newGame players =
         deck2 = draw 5 ([71 .. 90], [])
         decks = [deck0, deck1, deck2]
     in
-        SplendorGame
-            { _sgPlayers = playerMap
-            , _sgBank = bank
-            , _sgDecks = decks
-            , _sgTurnNumber = 0
-            }
+        mkSplendorGame playerMap bank decks 0 False
 
 newPlayer :: String -> Int -> Player
 newPlayer username order =
     let
         tokens = M.fromList $ map (,0) allColorsAndGold
     in
-        Player
-            { _pOwnedDevelopments = []
-            , _pReservedDevelopments = []
-            , _pTokens = tokens
-            , _pUsername = username
-            , _pTurnOrder = order
-            }
+        mkPlayer [] [] tokens username order
 
 draw :: Int -> DevelopmentDeck -> DevelopmentDeck
 draw n (unshown, shown) =

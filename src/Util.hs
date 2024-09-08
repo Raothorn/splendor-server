@@ -1,6 +1,7 @@
 {-# LANGUAGE RankNTypes #-}
 module Util (
     useEither,
+    useEither',
     clamp,
     maybeToEither,
     liftErr,
@@ -23,6 +24,13 @@ useEither err l = do
     case value of
         Just v -> return v
         Nothing -> liftErr err
+
+useEither' :: Lens' s (Maybe b) -> Update s b
+useEither' l = do
+    value <- use l
+    case value of
+        Just v -> return v
+        Nothing -> liftErr "Error converting Maybe to Either"
 
 maybeToEither :: b -> Maybe a -> Either b a
 maybeToEither err = maybe (Left err) Right

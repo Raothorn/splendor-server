@@ -1,5 +1,6 @@
 {-# LANGUAGE RankNTypes #-}
 module GameState (
+    getPlayer,
     getBankTokens,
     updateBankTokens,
     removeShownDevelopment,
@@ -7,9 +8,7 @@ module GameState (
 ) where
 
 
-import Control.Monad
-import Control.Monad.Trans.Class
-import Data.List
+import qualified Data.List as L
 import qualified Data.Map as M
 
 import Lens.Micro
@@ -21,28 +20,34 @@ import Util
 import DevelopmentLookup (getDeckIndex)
 import Data.Maybe
 
+import qualified Lenses.PlayerLenses as P
+import qualified Lenses.GameLenses as G
+
 -----------------------------------------
 -- Normal functions (for serialization)
 -----------------------------------------
 getCurrentTurnPlayer :: SplendorGame -> Maybe Player
 getCurrentTurnPlayer game = 
-    let players = game ^. sgPlayers
-        turn = game ^. sgTurnNumber `mod` length players
-        player =  mapVals (M.filter (\p -> p ^. pTurnOrder == turn) players)
+    let players = game ^. G.players
+        turn = game ^. G.turnNumber `mod` length players
+        player =  mapVals (M.filter (\p -> p ^. P.turnOrder == turn) players)
         res = player ^? _head
     in res
 
 ----------------------------------
 -- Stateful functions
 ----------------------------------
+getPlayer :: Guid -> Update SplendorGame Player 
+getPlayer pg = useEither "Cannot find player" $ G.players . at pg
+
 getBankTokens :: GemColor -> Update SplendorGame Int
-getBankTokens color = use $ sgBank . at color . to (fromMaybe 0)
+getBankTokens color = use $ G.bank . at color . to (fromMaybe 0)
 
 updateBankTokens :: (Int -> Int) -> GemColor -> Update SplendorGame ()
 updateBankTokens f color = do
-    prevAmt <- useEither "Cannot find tokens" (sgBank . at color)
+    prevAmt <- useEither "Cannot find tokens" (G.bank . at color)
     if f prevAmt >= 0
-        then sgBank . at color . mapped .= f prevAmt
+        then G.bank . at color . mapped .= f prevAmt
         else liftErr "Not enough tokens in the pile to do that."
 
 
@@ -51,13 +56,13 @@ updateBankTokens f color = do
 removeShownDevelopment :: DevelopmentId -> Update SplendorGame ()
 removeShownDevelopment devId = do
     let deckIx = getDeckIndex devId
-    zoom (sgDecks . ix deckIx) $ do
+    zoom (G.decks . ix deckIx) $ do
         shown <- use shownDevs
-        let (chosenDev, remaining) =  partition (== devId) shown
+        let (chosenDev, remaining) =  L.partition (== devId) shown
 
         case chosenDev of
             [] -> liftErr "The chosen development doesn't exist"
-            x:_ -> do
+            _ -> do
                 -- Update the shown cards
                 shownDevs .= remaining
 

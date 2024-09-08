@@ -27,8 +27,11 @@ library
   exposed-modules:
       Action
       DevelopmentLookup
+      GameOptions
       GameState
       InitState
+      Lenses.GameLenses
+      Lenses.PlayerLenses
       Lib
       Player
       Protocol

@@ -14,13 +14,14 @@ import Data.Aeson
 import Data.Text (Text)
 import GHC.Generics
 import Network.WebSockets (WebSocketsData (fromLazyByteString))
-import Types 
+import Types
 import Lens.Micro
-import DevelopmentLookup
 
 import GameState
-import Player 
+import Player
 
+import qualified Lenses.PlayerLenses as P
+import qualified Lenses.GameLenses as G
 ----------------------------------
 -- Types
 ----------------------------------
@@ -51,7 +52,7 @@ encodeResponse = fromLazyByteString . encode
 ----------------------------------
 -- Query
 ----------------------------------
-data Query 
+data Query
     = DevelopmentCostQ DevelopmentId
     | CanAffordQ Guid DevelopmentId
     | NoQ
@@ -75,30 +76,29 @@ instance ToJSON Response
 -- for testing
 instance ToJSON Query
 instance ToJSON Action
-instance ToJSON Request 
+instance ToJSON Request
 
 instance ToJSON GemColor
 instance ToJSONKey GemColor
 instance ToJSON Player where
     toJSON player =
-        let vps = sum $ map (developmentVp . getDevelopmentData) (player ^. pOwnedDevelopments)
-         in object
-                [ "tokens" .= (player ^. pTokens)
+         object
+                [ "tokens" .= (player ^. P.tokens)
                 , "developmentGems" .= getDevelopmentGems player
-                , "ownedDevelopments" .= (player ^. pOwnedDevelopments)
-                , "reservedDevelopments" .= (player ^. pReservedDevelopments)
-                , "victoryPoints" .= vps
-                , "username" .= (player ^. pUsername)
-                , "turnOrder" .= (player ^. pTurnOrder)
+                , "ownedDevelopments" .= (player ^. P.ownedDevelopments)
+                , "reservedDevelopments" .= (player ^. P.reservedDevelopments)
+                , "victoryPoints" .= getVictoryPoints player
+                , "username" .= (player ^. P.username)
+                , "turnOrder" .= (player ^. P.turnOrder)
                 ]
 
 instance ToJSON SplendorGame where
     toJSON game =
-        let currentPlayer = fmap _pUsername (getCurrentTurnPlayer game)
+        let currentPlayer = fmap (^. P.username) (getCurrentTurnPlayer game)
         in object
-            [ "players" .= (game ^. sgPlayers)
-            , "tokenBank" .= (game ^. sgBank)
-            , "decks" .= (game ^. sgDecks)
+            [ "players" .= (game ^. G.players)
+            , "tokenBank" .= (game ^. G.bank)
+            , "decks" .= (game ^. G.decks)
             , "currentPlayer" .= currentPlayer
             ]
 

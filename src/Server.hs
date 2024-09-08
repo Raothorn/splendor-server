@@ -26,8 +26,9 @@ import Action
 import Protocol
 import Types
 import InitState
-import Network.WebSockets (WebSocketsData(fromLazyByteString))
 import Player (canAfford)
+
+import qualified Lenses.GameLenses as G
 ----------------------------------
 -- Types
 ----------------------------------
@@ -131,7 +132,7 @@ respondQuery (DevelopmentCostQ devId) _ = do
     return $ QueryResponse (DevelopmentCostR cost)
 
 respondQuery (CanAffordQ pg devId) gs = do
-    let player = gs ^. sgPlayers . at pg 
+    let player = gs ^. G.players . at pg 
 
     case player of
         Just p -> return $ QueryResponse (CanAffordR (canAfford p devId))

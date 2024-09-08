@@ -1,6 +1,7 @@
 module Player (
     getDevelopmentGems,
     canAfford,
+    getVictoryPoints,
     zoomPlayer,
     updatePlayerTokens,
     hasReservedDevelopment,
@@ -16,21 +17,23 @@ import Lens.Micro.Mtl
 import DevelopmentLookup
 import Types
 import Util
+import qualified Lenses.PlayerLenses as P
+import qualified Lenses.GameLenses as G
 
------------------------------------------
--- Normal functions (for serialization)
------------------------------------------
+----------------------------------
+-- Normal functions
+----------------------------------
 getDevelopmentGems :: Player -> TokenPiles
 getDevelopmentGems player = M.fromList $ map (\c -> (c, getGemAmt c)) allColors
   where
-    developments = map getDevelopmentData (player ^. pOwnedDevelopments)
+    developments = map getDevelopmentData (player ^. P.ownedDevelopments)
     getGemAmt c = length (filter (\d -> developmentGem d == c) developments)
 
 canAfford :: Player -> DevelopmentId -> Bool
 canAfford player devId =
     let
         cost = developmentCost $ getDevelopmentData devId
-        playerTokens = player ^. pTokens
+        playerTokens = player ^. P.tokens
         devGems = getDevelopmentGems player
         calcRemaining (color, amt) =
             max 0 $ amt - (playerTokens M.! color) - (devGems M.! color)
@@ -38,19 +41,26 @@ canAfford player devId =
     in
         sum remaining <= playerTokens M.! Gold
 
+getVictoryPoints :: Player -> Int
+getVictoryPoints player = 
+    sum $ map (developmentVp . getDevelopmentData) (player ^. P.ownedDevelopments)
+
+hasReservedDevelopment :: Int -> Player -> Bool
+hasReservedDevelopment devId player = devId `elem` player ^. P.reservedDevelopments
 ----------------------------------
 -- Stateful functions
 ----------------------------------
 zoomPlayer :: Guid -> Update Player () -> Update SplendorGame ()
-zoomPlayer pg = zoom (sgPlayers . at pg . traversed)
+zoomPlayer pg = 
+    zoom (G.players . at pg . traversed)
 
 updatePlayerTokens :: (Int -> Int) -> GemColor -> Update Player ()
 updatePlayerTokens f color = do
-    amount <- useEither "Cannot find tokens" (pTokens . at color)
+    amount <- useEither "Cannot find tokens" (P.tokens . at color)
     let amount' = f amount
 
     when (amount' < 0) $ liftErr notEnoughErr
-    pTokens . at color . mapped .= amount'
+    P.tokens . at color . mapped .= amount'
   where
     notEnoughErr =
         "You do not have enough "
@@ -59,16 +69,7 @@ updatePlayerTokens f color = do
 
 removeReservedDevelopment :: Int -> Update Player ()
 removeReservedDevelopment devId = do
-    developments <- use pReservedDevelopments
+    developments <- use P.reservedDevelopments
     if devId `elem` developments
-        then pReservedDevelopments %= filter (/= devId)
+        then P.reservedDevelopments %= filter (/= devId)
         else liftErr "Development not reserved by player"
-
-----------------------------------
--- Getters (don't zoom in for getters)
-----------------------------------
-
-hasReservedDevelopment :: Guid -> Int -> Update SplendorGame Bool
-hasReservedDevelopment pg devId = do
-    developments <- use $ playerL pg . pReservedDevelopments
-    return $ devId `elem` developments

@@ -3,6 +3,7 @@ module Action (
 ) where
 
 import Control.Monad
+import Data.Functor
 
 import Lens.Micro
 import Lens.Micro.Mtl
@@ -13,6 +14,9 @@ import Player
 import Types
 import Util
 import qualified Data.Map as M
+import qualified GameOptions as Op
+import qualified Lenses.PlayerLenses as P
+import qualified Lenses.GameLenses as G
 
 execAction :: Guid -> Action -> Update SplendorGame ()
 ----------------------------------
@@ -31,7 +35,7 @@ execAction pg (AcquireTokens colors) = do
     forM_ colors $ \c -> do
         when (c == Gold) $
             liftErr "You cannot choose a gold token for this action"
-        
+
         tokens <- getBankTokens c
         when (requires4 && tokens < 4) $
             liftErr "You can't perform this action unless there are at least 4 tokens in the pile"
@@ -39,20 +43,20 @@ execAction pg (AcquireTokens colors) = do
         updateBankTokens (subtract amt) c
         zoomPlayer pg $ updatePlayerTokens (+ amt) c
 
-    sgTurnNumber += 1
+    G.turnNumber += 1
 
 ----------------------------------
 -- PurchaseDevelopment Action
 ----------------------------------
 execAction pg (PurchaseDevelopment devId goldAllocation) = do
     -- Allocate the gold jokers as the chosen gem type
-    forM_ goldAllocation $ \(color, amt) -> 
+    forM_ goldAllocation $ \(color, amt) ->
         zoomPlayer pg $ do
             updatePlayerTokens (subtract amt) Gold
             updatePlayerTokens (+ amt) color
 
-    devGems <- use $ playerL pg . to getDevelopmentGems
-            
+    devGems <- getPlayer pg <&> getDevelopmentGems
+
     let devData = getDevelopmentData devId
 
     forM_ allColors $ \color -> do
@@ -67,7 +71,7 @@ execAction pg (PurchaseDevelopment devId goldAllocation) = do
         updateBankTokens (+ cost) color
 
     -- Determine if the development is coming from the board or the player's reserve
-    isReserve <- hasReservedDevelopment pg devId
+    isReserve <- getPlayer pg <&> hasReservedDevelopment 0 
     if isReserve
         -- Remove the card from the player's reserve
         then zoomPlayer pg $ removeReservedDevelopment devId
@@ -75,10 +79,15 @@ execAction pg (PurchaseDevelopment devId goldAllocation) = do
         else removeShownDevelopment devId
 
     -- Give the development to the player
-    zoomPlayer pg $ pOwnedDevelopments %= (devId :)
+    zoomPlayer pg $ P.ownedDevelopments %= (devId :)
+
+    -- If the player now has 15 or more victory points, set the "last round" flag
+    vps <- getPlayer pg <&> getVictoryPoints
+    when (vps >= Op.vpsToWin) $
+        G.lastRound .= True  
 
     -- Increment the turn
-    sgTurnNumber += 1
+    G.turnNumber += 1
 
 ----------------------------------
 -- ReserveDevelopment Action
@@ -88,12 +97,12 @@ execAction pg (ReserveDevelopment devId) = do
     removeShownDevelopment devId
 
     -- Reserve the development to the player
-    zoomPlayer pg $ pReservedDevelopments %= (devId :)
+    zoomPlayer pg $ P.reservedDevelopments %= (devId :)
 
     -- Take a gold if possible
-    gold <- useEither "" $ sgBank . at Gold
+    gold <- useEither' $ G.bank . at Gold
     let gold' = (clamp (0, maxBound) . subtract 1) gold
-    sgBank . at Gold ?= gold'
+    G.bank . at Gold ?= gold'
 
     -- If a gold was taken, give it to the player
     when (gold' < gold) $
@@ -101,5 +110,5 @@ execAction pg (ReserveDevelopment devId) = do
             updatePlayerTokens (+ 1) Gold
 
     -- Increment the turn
-    sgTurnNumber += 1
+    G.turnNumber += 1
 execAction _ _ = return ()
