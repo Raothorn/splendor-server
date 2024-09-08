@@ -1,8 +1,6 @@
-module Lib
-    ( someFunc
-    ) where
-
-import Server 
+module Lib (
+    someFunc
+) where
 
 someFunc :: IO ()
-someFunc = runServer
+someFunc = return ()
