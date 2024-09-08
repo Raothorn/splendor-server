@@ -15,6 +15,7 @@ import Types.Player
 import Types.Development
 import Types.GemColor
 import Types.Alias
+import Types.Noble
 
 ----------------------------------
 -- GameState
@@ -23,6 +24,7 @@ data SplendorGame = SplendorGame
     { _players :: M.Map Guid Player
     , _bank :: TokenPiles
     , _decks :: [DevelopmentDeck]
+    , _nobles :: [NobleId]
     , _turnNumber :: Int
     , _lastRound :: Bool
     , _gameOver :: Maybe GameOverSummary
@@ -40,8 +42,9 @@ newGame players =
         deck1 = draw 5 ([41 .. 70], [])
         deck2 = draw 5 ([71 .. 90], [])
         decks = [deck0, deck1, deck2]
+        nobles = [0]
     in
-        SplendorGame playerMap bank decks 0 False Nothing
+        SplendorGame playerMap bank decks nobles 0 False Nothing 
 
 draw :: Int -> DevelopmentDeck -> DevelopmentDeck
 draw n (unshown, shown) = 

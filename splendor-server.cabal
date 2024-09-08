@@ -41,6 +41,7 @@ library
       Types.Alias
       Types.Development
       Types.GemColor
+      Types.Noble
       Types.Player
       Types.SplendorGame
       Util

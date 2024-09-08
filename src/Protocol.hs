@@ -89,6 +89,7 @@ instance ToJSON Player where
                 , "developmentGems" .= (player ^. P.allBonusGems)
                 , "ownedDevelopments" .= (player ^. P.ownedDevelopments)
                 , "reservedDevelopments" .= (player ^. P.reservedDevelopments)
+                , "nobles" .= (player ^. P.nobles)
                 , "victoryPoints" .= (player ^. P.victoryPoints)
                 , "username" .= (player ^. P.username)
                 , "turnOrder" .= (player ^. P.turnOrder)
@@ -101,6 +102,7 @@ instance ToJSON SplendorGame where
             [ "players" .= (game ^. G.players)
             , "tokenBank" .= (game ^. G.bank)
             , "decks" .= (game ^. G.decks)
+            , "nobles" .= (game ^. G.nobles)
             , "currentPlayer" .= currentPlayer
             , "gameOverSummary" .= (game ^. G.gameOver)
             ]

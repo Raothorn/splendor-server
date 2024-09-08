@@ -11,6 +11,7 @@ import Lens.Micro.Platform()
 import Types.Player
 import Types.GemColor
 import Types.Development
+import Types.Noble
 import Util
 
 import qualified Lenses.DevelopmentLenses as D
@@ -44,3 +45,9 @@ canAfford devId player =
             max 0 $ amt - (player ^. tokenGems color) - (player ^. bonusGems color)
         remaining = map calcRemaining cost
     in sum remaining <= player ^. tokenGems Gold
+
+canVisitNoble :: NobleId -> Player -> Bool
+canVisitNoble nobleId player = 
+    let calcRemaining (color, amt) = amt - (player ^. bonusGems color)
+        remaining = map calcRemaining (lookupNoble nobleId)
+    in all (<= 0) remaining

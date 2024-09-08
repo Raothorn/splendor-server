@@ -1,3 +1,4 @@
+{-# OPTIONS_GHC -Wno-name-shadowing #-}
 module ExecAction (
     execAction,
 ) where
@@ -13,6 +14,7 @@ import qualified Data.List as L
 import qualified Lenses.GameLenses as G
 import qualified Lenses.PlayerLenses as P
 import qualified Lenses.DevelopmentLenses as D
+import qualified Types.Noble as N
 
 import State.GameState
 import State.PlayerState
@@ -88,18 +90,27 @@ execAction pg (PurchaseDevelopment devId goldAllocation) = do
             removeShownDevelopment devId
 
     -- Give the development to the player
-    zoomPlayer pg $ P.ownedDevelopments %= (devId :)
+    zoomPlayer pg $ do 
+        P.ownedDevelopments %= (devId :)
+
+    -- Check if the player qualifies for any of the nobles
+    player <- getPlayer pg
+    nobles <- use G.nobles
+    forM_ nobles $ \noble -> do
+        when (P.canVisitNoble noble player) $ do
+            zoomPlayer pg $ P.nobles %= (noble: ) 
+            G.nobles %= filter (/= noble)
 
     -- If the player now has 15 or more victory points, set the "last round" flag
-    player' <- getPlayer pg
+    player <- getPlayer pg
     notif <-
-        if player' ^. P.victoryPoints >= Op.vpsToWin
+        if player ^. P.victoryPoints >= Op.vpsToWin
             then do
                 G.lastRound .= True
                 return $
                     Just $
                         "Player "
-                            <> player' ^. P.username
+                            <> player ^. P.username
                             <> " has reached 15 victory points. The "
                             <> " game will be over at the end of this round"
             else return Nothing

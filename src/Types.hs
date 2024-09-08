@@ -4,7 +4,8 @@ module Types (
     module Types.GemColor,
     module Types.SplendorGame,
     module Types.Player,
-    module Types.Action
+    module Types.Action,
+    module Types.Noble
 ) where
 
 import Types.Alias
@@ -13,12 +14,4 @@ import Types.SplendorGame
 import Types.Player
 import Types.GemColor
 import Types.Action
-
-----------------------------------
--- Actions
-----------------------------------
-
-----------------------------------
--- Lenses
-----------------------------------
-
+import Types.Noble
