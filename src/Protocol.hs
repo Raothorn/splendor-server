@@ -15,11 +15,9 @@ import Data.Text (Text)
 import GHC.Generics
 import Network.WebSockets (WebSocketsData (fromLazyByteString))
 import Types
-import Types.GemColor
 import Lens.Micro
 
-import GameState
-import Player
+import State.GameState
 
 import qualified Lenses.PlayerLenses as P
 import qualified Lenses.GameLenses as G
@@ -88,10 +86,10 @@ instance ToJSON Player where
     toJSON player =
          object
                 [ "tokens" .= (player ^. P.tokens)
-                , "developmentGems" .= getDevelopmentGems player
+                , "developmentGems" .= (player ^. P.allBonusGems)
                 , "ownedDevelopments" .= (player ^. P.ownedDevelopments)
                 , "reservedDevelopments" .= (player ^. P.reservedDevelopments)
-                , "victoryPoints" .= getVictoryPoints player
+                , "victoryPoints" .= (player ^. P.victoryPoints)
                 , "username" .= (player ^. P.username)
                 , "turnOrder" .= (player ^. P.turnOrder)
                 ]

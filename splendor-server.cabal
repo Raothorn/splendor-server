@@ -25,21 +25,25 @@ source-repository head
 
 library
   exposed-modules:
-      Action
       DevelopmentLookup
+      ExecAction
       GameOptions
-      GameState
       InitState
       Lenses.DevelopmentLenses
       Lenses.GameLenses
       Lenses.PlayerLenses
       Lib
-      Player
       Protocol
       Server
+      State.GameState
+      State.PlayerState
       Types
+      Types.Action
+      Types.Alias
       Types.Development
       Types.GemColor
+      Types.Player
+      Types.SplendorGame
       Util
   other-modules:
       Paths_splendor_server

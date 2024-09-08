@@ -21,13 +21,11 @@ import Lens.Micro.TH (makeLenses)
 
 import qualified Network.WebSockets as WS
 
-import Action
+import ExecAction
 import Protocol
 import Types
-import Types.Development
-import InitState
-import Player (canAfford)
 
+import qualified Lenses.PlayerLenses as P
 import qualified Lenses.GameLenses as G
 import qualified Lenses.DevelopmentLenses as D
 ----------------------------------
@@ -136,7 +134,7 @@ respondQuery (CanAffordQ pg devId) gs = do
     let player = gs ^. G.players . at pg 
 
     case player of
-        Just p -> return $ QueryResponse (CanAffordR (canAfford p devId))
+        Just p -> return $ QueryResponse (CanAffordR (P.canAfford devId p))
         Nothing -> return $ QueryResponse NoR
     
 respondQuery _ _ = return $ QueryResponse NoR

@@ -3,6 +3,6 @@ module Lenses.GameLenses where
 
 import Lens.Micro.TH
 
-import Types
+import Types.SplendorGame
 
 makeLenses ''SplendorGame

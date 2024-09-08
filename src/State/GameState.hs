@@ -1,6 +1,6 @@
 {-# LANGUAGE RankNTypes #-}
 
-module GameState (
+module State.GameState (
     getPlayer,
     getBankTokens,
     updateBankTokens,
@@ -21,12 +21,14 @@ import Lens.Micro.Platform ()
 
 import qualified Lenses.GameLenses as G
 import qualified Lenses.PlayerLenses as P
-import Player 
-import DevelopmentLookup 
+import qualified Lenses.DevelopmentLenses as D
+
 import Util
-import Types
+import Types.Alias
+import Types.SplendorGame
 import Types.GemColor
 import Types.Development
+import Types.Player
 
 -----------------------------------------
 -- Normal functions (for serialization)
@@ -74,16 +76,16 @@ removeShownDevelopment :: DevelopmentId -> Update SplendorGame ()
 removeShownDevelopment devId = do
     let deckIx = lookupDeck devId
     zoom (G.decks . ix deckIx) $ do
-        shown <- use shownDevs
+        shown <- use D.shownDevs
         let (chosenDev, remaining) = L.partition (== devId) shown
 
         case chosenDev of
             [] -> liftErr "The chosen development doesn't exist"
             _ -> do
                 -- Update the shown cards
-                shownDevs .= remaining
+                D.shownDevs .= remaining
 
-        unshown <- use unshownDevs
+        unshown <- use D.unshownDevs
         -- Try to replace the removed card
         case unshown of
             -- If no cards available, exit without erroring.
@@ -91,10 +93,10 @@ removeShownDevelopment devId = do
             -- Otherwise, draw a card from the unshown pile
             u : us -> do
                 -- Add the newly drawn card to the end of the shown developments
-                shownDevs %= (++ [u])
-                unshownDevs .= us
+                D.shownDevs %= (++ [u])
+                D.unshownDevs .= us
 
 getWinner :: Update SplendorGame Player
 getWinner = do
     players <- use G.players
-    return $ maximumByL (to getVictoryPoints) players
+    return $ maximumByL P.victoryPoints players

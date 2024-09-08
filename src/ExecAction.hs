@@ -1,24 +1,24 @@
-module Action (
+module ExecAction (
     execAction,
 ) where
 
 import Control.Monad
-import Data.Functor
 
 import Lens.Micro
 import Lens.Micro.Mtl
 
-import qualified Data.Map as M
 import qualified Data.List as L
-import qualified GameOptions as Op
-import GameState
+
+
 import qualified Lenses.GameLenses as G
 import qualified Lenses.PlayerLenses as P
 import qualified Lenses.DevelopmentLenses as D
-import Player
+
+import State.GameState
+import State.PlayerState
+
+import qualified GameOptions as Op
 import Types
-import Types.GemColor
-import Types.Development
 import Util
 
 execAction :: Guid -> Action -> Update SplendorGame (Maybe GameMessage)
@@ -59,19 +59,18 @@ execAction pg (PurchaseDevelopment devId goldAllocation) = do
             updatePlayerTokens (subtract amt) Gold
             updatePlayerTokens (+ amt) color
 
-    devGems <- getPlayer pg <&> getDevelopmentGems
-
     let devData = devId ^. lookupDev
 
+    player <- getPlayer pg
     forM_ allColors $ \color -> do
         -- The bonus the player gets from developments
-        devBonus <- liftMaybe (M.lookup color devGems)
+        let bonus = player ^. P.bonusGems color
 
         -- The cost for this gem type after the bonus
         devCost <- liftMaybe (L.lookup color $ devData ^. D.cost)
 
         -- The actual amount of tokens the player needs to spend
-        let playerCost = devCost - devBonus
+        let playerCost = devCost - bonus
 
         -- Removes the tokens from the player pile. If they do not
         -- have enough, this will propogate an error
@@ -81,7 +80,7 @@ execAction pg (PurchaseDevelopment devId goldAllocation) = do
         updateBankTokens (+ playerCost) color
 
     -- Determine if the development is coming from the board or the player's reserve
-    isReserve <- getPlayer pg <&> hasReservedDevelopment devId
+    let isReserve = devId `elem` player ^. P.reservedDevelopments 
     if isReserve
         then -- Remove the card from the player's reserve
             zoomPlayer pg $ removeReservedDevelopment devId
@@ -92,16 +91,15 @@ execAction pg (PurchaseDevelopment devId goldAllocation) = do
     zoomPlayer pg $ P.ownedDevelopments %= (devId :)
 
     -- If the player now has 15 or more victory points, set the "last round" flag
-    vps <- getPlayer pg <&> getVictoryPoints
+    player' <- getPlayer pg
     notif <-
-        if vps >= Op.vpsToWin
+        if player' ^. P.victoryPoints >= Op.vpsToWin
             then do
                 G.lastRound .= True
-                player <- getPlayer pg
                 return $
                     Just $
                         "Player "
-                            <> player ^. P.username
+                            <> player' ^. P.username
                             <> " has reached 15 victory points. The "
                             <> " game will be over at the end of this round"
             else return Nothing
