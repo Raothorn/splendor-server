@@ -42,7 +42,7 @@ newGame players =
         deck1 = draw 5 ([41 .. 70], [])
         deck2 = draw 5 ([71 .. 90], [])
         decks = [deck0, deck1, deck2]
-        nobles = [0]
+        nobles = [0, 1, 2]
     in
         SplendorGame playerMap bank decks nobles 0 False Nothing 
 

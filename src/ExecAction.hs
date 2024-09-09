@@ -72,7 +72,7 @@ execAction pg (PurchaseDevelopment devId goldAllocation) = do
         devCost <- liftMaybe (L.lookup color $ devData ^. D.cost)
 
         -- The actual amount of tokens the player needs to spend
-        let playerCost = devCost - bonus
+        let playerCost = max 0 $ devCost - bonus
 
         -- Removes the tokens from the player pile. If they do not
         -- have enough, this will propogate an error
