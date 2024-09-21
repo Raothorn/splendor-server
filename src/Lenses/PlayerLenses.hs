@@ -32,10 +32,12 @@ allBonusGems = to getGems
         getGems p = M.fromList $ map (\c -> (c, getGemAmt p c)) allColors
 
 victoryPoints :: SimpleGetter Player Int
-victoryPoints = to devVps
+victoryPoints = to total
   where
-    devVps player = 
+    devVps player =
         sum $ player ^. ownedDevelopments ^.. each . lookupDev ^.. each . D.pp
+    nobleVps player = 3 * length (player ^. nobles)
+    total player = devVps player + nobleVps player
 
 -- This isn't a lens but there isn't a better place for it for now
 canAfford :: DevelopmentId -> Player -> Bool
@@ -47,7 +49,7 @@ canAfford devId player =
     in sum remaining <= player ^. tokenGems Gold
 
 canVisitNoble :: NobleId -> Player -> Bool
-canVisitNoble nobleId player = 
+canVisitNoble nobleId player =
     let calcRemaining (color, amt) = amt - (player ^. bonusGems color)
         remaining = map calcRemaining (lookupNoble nobleId)
     in all (<= 0) remaining

@@ -7,11 +7,14 @@ module Protocol (
     Response (..),
     Query (..),
     QueryResponse (..),
+    NotificationType(..),
     encodeResponse,
 ) where
 
 import Data.Aeson
+import qualified Data.Aeson as A
 import Data.Text (Text)
+import qualified Data.Text as T
 import GHC.Generics
 import Network.WebSockets (WebSocketsData (fromLazyByteString))
 import Types
@@ -41,14 +44,16 @@ data Response
     = LobbyUpdate [String]
     | GameUpdate SplendorGame
     | JoinLobbySuccess String
-    | Notification GameMessage
-    | ErrorNotification String  
+    | Notification LogEvent NotificationType
     | QueryResponse QueryResponse
     | NoResponse
     deriving (Generic, Show)
 
 encodeResponse :: Response -> Text
 encodeResponse = fromLazyByteString . encode
+
+data NotificationType = NotifyError | NotifyInfo
+    deriving (Show, Generic)
 
 ----------------------------------
 -- Query
@@ -73,11 +78,16 @@ instance FromJSON Query
 instance FromJSON Request
 
 instance ToJSON QueryResponse
+
 instance ToJSON Response
+
+instance ToJSON NotificationType
+instance ToJSON Action
+instance ToJSON LogEvent where
+    toJSON = A.String . T.pack . show
 
 -- for testing
 -- instance ToJSON Query
--- instance ToJSON Action
 -- instance ToJSON Request
 
 instance ToJSON GemColor
@@ -105,6 +115,7 @@ instance ToJSON SplendorGame where
             , "nobles" .= (game ^. G.nobles)
             , "currentPlayer" .= currentPlayer
             , "gameOverSummary" .= (game ^. G.gameOver)
+            , "messageLog" .= (game ^. G.messageLog)
             ]
 
 instance FromJSON GemColor

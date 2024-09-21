@@ -1,4 +1,5 @@
 {-# OPTIONS_GHC -Wno-name-shadowing #-}
+
 module ExecAction (
     execAction,
 ) where
@@ -10,11 +11,9 @@ import Lens.Micro.Mtl
 
 import qualified Data.List as L
 
-
+import qualified Lenses.DevelopmentLenses as D
 import qualified Lenses.GameLenses as G
 import qualified Lenses.PlayerLenses as P
-import qualified Lenses.DevelopmentLenses as D
-import qualified Types.Noble as N
 
 import State.GameState
 import State.PlayerState
@@ -23,17 +22,24 @@ import qualified GameOptions as Op
 import Types
 import Util
 
-execAction :: Guid -> Action -> Update SplendorGame (Maybe GameMessage)
+
+execAction :: Guid -> Action -> Update SplendorGame ()
+execAction pg action = do
+    player <- getPlayer pg
+    logEvent (PlayerChoseAction player action)
+    execAction' pg action
+
+execAction' :: Guid -> Action -> Update SplendorGame ()
 ----------------------------------
 -- AcquireTokens Action
 ----------------------------------
-execAction pg (AcquireTokens colors) = do
+execAction' pg (AcquireTokens colors) = do
     -- If 2 of one color token is taken, there must be 4 in the pile
     (requires4, amt) <- case length colors of
         -- If only one color is chosen, take 2
         1 -> return (True, 2)
         -- If three colors are chosen, take one of each
-        3 -> return (False, 2)
+        3 -> return (False, 1)
         _ -> liftErr "You must select 3 tokens of different colors, or 2 of the same color"
 
     -- For each color chosen, remove 'amt' from the pile and give it to the player
@@ -49,18 +55,11 @@ execAction pg (AcquireTokens colors) = do
         zoomPlayer pg $ updatePlayerTokens (+ amt) c
 
     advanceTurn
-    return Nothing
 
 ----------------------------------
 -- PurchaseDevelopment Action
 ----------------------------------
-execAction pg (PurchaseDevelopment devId goldAllocation) = do
-    -- Allocate the gold jokers as the chosen gem type
-    forM_ goldAllocation $ \(color, amt) ->
-        zoomPlayer pg $ do
-            updatePlayerTokens (subtract amt) Gold
-            updatePlayerTokens (+ amt) color
-
+execAction' pg (PurchaseDevelopment devId goldAllocation) = do
     let devData = devId ^. lookupDev
 
     player <- getPlayer pg
@@ -70,19 +69,24 @@ execAction pg (PurchaseDevelopment devId goldAllocation) = do
 
         -- The cost for this gem type after the bonus
         devCost <- liftMaybe (L.lookup color $ devData ^. D.cost)
+        goldAllocation <- liftMaybe (L.lookup color goldAllocation)
 
         -- The actual amount of tokens the player needs to spend
-        let playerCost = max 0 $ devCost - bonus
+        let playerCost = max 0 $ devCost - bonus - goldAllocation
 
-        -- Removes the tokens from the player pile. If they do not
-        -- have enough, this will propogate an error
-        zoomPlayer pg $ updatePlayerTokens (subtract playerCost) color
+        zoomPlayer pg $ do 
+            -- Remove the tokens from the player pile
+            updatePlayerTokens (subtract playerCost) color
+            -- Take the gold from the player
+            updatePlayerTokens (subtract goldAllocation) Gold
 
         -- Add the token back to the bank
         updateBankTokens (+ playerCost) color
+        -- give the gold tokens back to the bank
+        updateBankTokens (+ goldAllocation) Gold
 
     -- Determine if the development is coming from the board or the player's reserve
-    let isReserve = devId `elem` player ^. P.reservedDevelopments 
+    let isReserve = devId `elem` player ^. P.reservedDevelopments
     if isReserve
         then -- Remove the card from the player's reserve
             zoomPlayer pg $ removeReservedDevelopment devId
@@ -90,7 +94,7 @@ execAction pg (PurchaseDevelopment devId goldAllocation) = do
             removeShownDevelopment devId
 
     -- Give the development to the player
-    zoomPlayer pg $ do 
+    zoomPlayer pg $ do
         P.ownedDevelopments %= (devId :)
 
     -- Check if the player qualifies for any of the nobles
@@ -98,30 +102,29 @@ execAction pg (PurchaseDevelopment devId goldAllocation) = do
     nobles <- use G.nobles
     forM_ nobles $ \noble -> do
         when (P.canVisitNoble noble player) $ do
-            zoomPlayer pg $ P.nobles %= (noble: ) 
+            zoomPlayer pg $ P.nobles %= (noble :)
             G.nobles %= filter (/= noble)
 
     -- If the player now has 15 or more victory points, set the "last round" flag
+    -- and notify.
     player <- getPlayer pg
-    notif <-
-        if player ^. P.victoryPoints >= Op.vpsToWin
-            then do
-                G.lastRound .= True
-                return $
-                    Just $
-                        "Player "
-                            <> player ^. P.username
-                            <> " has reached 15 victory points. The "
-                            <> " game will be over at the end of this round"
-            else return Nothing
+    when (player ^. P.victoryPoints >= Op.vpsToWin) $ do
+        G.lastRound .= True
+        -- log and notify
+        let event = LastRound player
+        logEvent event
+        notifyEvent event
 
     advanceTurn
-    return notif
 
 ----------------------------------
 -- ReserveDevelopment Action
 ----------------------------------
-execAction pg (ReserveDevelopment devId) = do
+execAction' pg (ReserveDevelopment devId) = do
+    player <- getPlayer pg
+    when (length (player ^. P.reservedDevelopments) >= 3) $
+        liftErr "You may not reserve more than three developments"
+    
     -- Removes the development from the shown pile and shows a new one if possible
     removeShownDevelopment devId
 
@@ -139,5 +142,5 @@ execAction pg (ReserveDevelopment devId) = do
             updatePlayerTokens (+ 1) Gold
 
     advanceTurn
-    return Nothing
-execAction _ _ = return Nothing
+
+execAction' _ _ = return ()

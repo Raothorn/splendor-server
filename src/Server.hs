@@ -6,6 +6,8 @@ module Server (
     runServer,
 ) where
 
+import Prelude hiding (log)
+
 import Control.Concurrent
 import Control.Exception
 import Control.Monad
@@ -28,6 +30,7 @@ import Types
 import qualified Lenses.PlayerLenses as P
 import qualified Lenses.GameLenses as G
 import qualified Lenses.DevelopmentLenses as D
+import State.GameState (getCurrentTurnPlayer)
 ----------------------------------
 -- Types
 ----------------------------------
@@ -139,6 +142,9 @@ respondQuery (CanAffordQ pg devId) gs = do
     
 respondQuery _ _ = return $ QueryResponse NoR
 
+notify :: LogEvent -> NotificationType -> ServerState -> IO ()
+notify ev notifType = broadcastMessage (Notification ev notifType)
+
 talkGame :: BS.ByteString -> Client -> SplendorGame -> ServerState -> IO ServerState
 talkGame msg client gs server = do
     let decodedMessage = decode msg :: Maybe Request
@@ -146,25 +152,26 @@ talkGame msg client gs server = do
     case decodedMessage of
         Just (ActionRequest action) -> do
             putStrLn $ "Received action " <> show action
-            let actionResult = runStateT (execAction (client ^. clientGuid) action) gs
+            let actionResult = execStateT (execAction (client ^. clientGuid) action) gs
 
             case actionResult of
                 Left err -> do
                     putStrLn $ "Error: " <> err
-                    sendMessage (ErrorNotification err) client
+                    notify (LogError err) NotifyError server
                     return server
-                Right (notif, gs') -> do
+                Right  gs' -> do
                     putStrLn "----OLD-----"
                     print gs
                     putStrLn "----NEW-----"
                     print gs'
-                    
-                    case notif of 
-                        Just n -> broadcastMessage (Notification n) server
-                        Nothing -> return ()
 
-                    broadcastMessage (GameUpdate gs') server
-                    return (server & appState ?~ gs')
+                    forM_ (gs' ^. G.notificationQueue) $ \notif -> do 
+                        notify notif NotifyInfo server
+
+                    let gs'' = gs' & G.notificationQueue .~ []
+
+                    broadcastMessage (GameUpdate gs'') server
+                    return (server & appState ?~ gs'')
 
         Just (QueryRequest query) -> do
             putStrLn $ "Recieved query: " <> show query

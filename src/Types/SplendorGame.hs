@@ -16,6 +16,7 @@ import Types.Development
 import Types.GemColor
 import Types.Alias
 import Types.Noble
+import Types.LogMessage (LogEvent)
 
 ----------------------------------
 -- GameState
@@ -28,6 +29,8 @@ data SplendorGame = SplendorGame
     , _turnNumber :: Int
     , _lastRound :: Bool
     , _gameOver :: Maybe GameOverSummary
+    , _messageLog :: [LogEvent]
+    , _notificationQueue :: [LogEvent]
     }
     deriving (Generic, Show)
 
@@ -44,7 +47,7 @@ newGame players =
         decks = [deck0, deck1, deck2]
         nobles = [0, 1, 2]
     in
-        SplendorGame playerMap bank decks nobles 0 False Nothing 
+        SplendorGame playerMap bank decks nobles 0 False Nothing [] []
 
 draw :: Int -> DevelopmentDeck -> DevelopmentDeck
 draw n (unshown, shown) = 

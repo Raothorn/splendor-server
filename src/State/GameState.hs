@@ -7,6 +7,8 @@ module State.GameState (
     advanceTurn,
     removeShownDevelopment,
     getCurrentTurnPlayer,
+    logEvent,
+    notifyEvent,
 ) where
 
 import Control.Monad
@@ -24,11 +26,7 @@ import qualified Lenses.PlayerLenses as P
 import qualified Lenses.DevelopmentLenses as D
 
 import Util
-import Types.Alias
-import Types.SplendorGame
-import Types.GemColor
-import Types.Development
-import Types.Player
+import Types
 
 -----------------------------------------
 -- Normal functions (for serialization)
@@ -100,3 +98,29 @@ getWinner :: Update SplendorGame Player
 getWinner = do
     players <- use G.players
     return $ maximumByL P.victoryPoints players
+
+
+logEvent :: LogEvent -> Update SplendorGame ()
+logEvent event = G.messageLog %= (++ [event])
+
+notifyEvent :: LogEvent -> Update SplendorGame ()
+notifyEvent event = G.notificationQueue %= (++ [event])
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
